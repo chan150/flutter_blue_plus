@@ -8,6 +8,7 @@ environment:
   flutter: ">=2.5.0"
 
 dependencies:
+  plugin_platform_interface: ">=2.1.8"
   flutter:
     sdk: flutter
 
@@ -21,3 +22,6 @@ flutter:
         pluginClass: FlutterBluePlusPlugin
       macos:
         pluginClass: FlutterBluePlusPlugin
+      windows:
+        pluginClass: FlutterBluePlusPlugin
+        fileName: flutter_blue_plus_windows.dart

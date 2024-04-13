@@ -7,9 +7,9 @@ part of flutter_blue_plus;
 final FlutterBluePlus = FlutterBluePlusFactory();
 
 class FlutterBluePlusFactory {
-  factory FlutterBluePlusFactory() => _this;
+  factory FlutterBluePlusFactory() => _instance;
 
-  static final FlutterBluePlusFactory _this =
+  static final FlutterBluePlusFactory _instance =
       FlutterBluePlusFactory._internal();
 
   FlutterBluePlusFactory._internal() {}
