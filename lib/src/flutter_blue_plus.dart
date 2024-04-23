@@ -141,20 +141,15 @@ class FlutterBluePlusFactory {
     // only wait if bluetooth was off
     if (changed) {
       // wait for response
-      BmTurnOnResponse response =
-          await futureResponse.fbpTimeout(timeout, "turnOn");
+      BmTurnOnResponse response = await futureResponse.fbpTimeout(timeout, "turnOn");
 
       // check response
       if (response.userAccepted == false) {
-        throw FlutterBluePlusException(ErrorPlatform.fbp, "turnOn",
-            FbpErrorCode.userRejected.index, "user rejected");
+        throw FlutterBluePlusException(ErrorPlatform.fbp, "turnOn", FbpErrorCode.userRejected.index, "user rejected");
       }
 
       // wait for adapter to turn on
-      await adapterState
-          .where((s) => s == BluetoothAdapterState.on)
-          .first
-          .fbpTimeout(timeout, "turnOn");
+      await adapterState.where((s) => s == BluetoothAdapterState.on).first.fbpTimeout(timeout, "turnOn");
     }
   }
 
@@ -181,11 +176,8 @@ class FlutterBluePlusFactory {
   /// Retrieve a list of devices currently connected to your app
   List<BluetoothDevice> get connectedDevices {
     var copy = Map.from(_connectionStates);
-    copy.removeWhere((key, value) =>
-        value.connectionState == BmConnectionStateEnum.disconnected);
-    return copy.values
-        .map((v) => BluetoothDevice(remoteId: v.remoteId))
-        .toList();
+    copy.removeWhere((key, value) => value.connectionState == BmConnectionStateEnum.disconnected);
+    return copy.values.map((v) => BluetoothDevice(remoteId: v.remoteId)).toList();
   }
 
   /// Retrieve a list of devices currently connected to the system
@@ -251,10 +243,8 @@ class FlutterBluePlusFactory {
     bool androidUsesFineLocation = false,
   }) async {
     // check args
-    assert(removeIfGone == null || continuousUpdates,
-        "removeIfGone requires continuousUpdates");
-    assert(removeIfGone == null || !oneByOne,
-        "removeIfGone is not compatible with oneByOne");
+    assert(removeIfGone == null || continuousUpdates, "removeIfGone requires continuousUpdates");
+    assert(removeIfGone == null || !oneByOne, "removeIfGone is not compatible with oneByOne");
     assert(continuousDivisor >= 1, "divisor must be >= 1");
 
     // check filters
@@ -304,15 +294,11 @@ class FlutterBluePlusFactory {
       _scanBuffer = _BufferStream.listen(responseStream);
 
       // invoke platform method
-      await _invokeMethod('startScan', settings.toMap())
-          .onError((e, s) => _stopScan(invokePlatform: false));
+      await _invokeMethod('startScan', settings.toMap()).onError((e, s) => _stopScan(invokePlatform: false));
 
       // check every 250ms for gone devices?
       late Stream<BmScanResponse?> outputStream = removeIfGone != null
-          ? _mergeStreams([
-              _scanBuffer!.stream,
-              Stream.periodic(Duration(milliseconds: 250))
-            ])
+          ? _mergeStreams([_scanBuffer!.stream, Stream.periodic(Duration(milliseconds: 250))])
           : _scanBuffer!.stream;
 
       // start by pushing an empty array
@@ -324,15 +310,13 @@ class FlutterBluePlusFactory {
       _scanSubscription = outputStream.listen((BmScanResponse? response) {
         if (response == null) {
           // if null, this is just a periodic update to remove old results
-          if (output._removeWhere((elm) =>
-              DateTime.now().difference(elm.timeStamp) > removeIfGone!)) {
+          if (output._removeWhere((elm) => DateTime.now().difference(elm.timeStamp) > removeIfGone!)) {
             _scanResults.add(List.from(output)); // push to stream
           }
         } else {
           // failure?
           if (response.success == false) {
-            var e = FlutterBluePlusException(
-                _nativeError, "scan", response.errorCode, response.errorString);
+            var e = FlutterBluePlusException(_nativeError, "scan", response.errorCode, response.errorString);
             _scanResults.addError(e);
             _stopScan(invokePlatform: false);
           }
@@ -382,12 +366,15 @@ class FlutterBluePlusFactory {
   Future<void> stopScan() async {
     _Mutex mtx = _MutexFactory.getMutexForKey("scan");
     await mtx.take();
-    if (isScanningNow) {
-      await _stopScan();
-    } else if (_logLevel.index >= LogLevel.info.index) {
-      print("[FBP] stopScan: already stopped");
+    try {
+      if(isScanningNow) {
+        await _stopScan();
+      } else if (_logLevel.index >= LogLevel.info.index) {
+        print("[FBP] stopScan: already stopped");
+      }
+    } finally {
+      mtx.give();
     }
-    mtx.give();
   }
 
   /// for internal use
@@ -423,12 +410,11 @@ class FlutterBluePlusFactory {
   Future<PhySupport> getPhySupport() async {
     // check android
     if (Platform.isAndroid == false) {
-      throw FlutterBluePlusException(ErrorPlatform.fbp, "getPhySupport",
-          FbpErrorCode.androidOnly.index, "android-only");
+      throw FlutterBluePlusException(
+          ErrorPlatform.fbp, "getPhySupport", FbpErrorCode.androidOnly.index, "android-only");
     }
 
-    return await _invokeMethod('getPhySupport')
-        .then((args) => PhySupport.fromMap(args));
+    return await _invokeMethod('getPhySupport').then((args) => PhySupport.fromMap(args));
   }
 
   Future<dynamic> _initFlutterBluePlus() async {
@@ -467,17 +453,14 @@ class FlutterBluePlusFactory {
 
     // keep track of adapter states
     if (call.method == "OnAdapterStateChanged") {
-      BmBluetoothAdapterState r =
-          BmBluetoothAdapterState.fromMap(call.arguments);
+      BmBluetoothAdapterState r = BmBluetoothAdapterState.fromMap(call.arguments);
       _adapterStateNow = r.adapterState;
       if (isScanningNow && r.adapterState != BmAdapterStateEnum.on) {
         _stopScan(invokePlatform: false);
       }
       if (r.adapterState == BmAdapterStateEnum.on) {
         for (DeviceIdentifier d in _autoConnect) {
-          BluetoothDevice(remoteId: d)
-              .connect(autoConnect: true, mtu: null)
-              .onError((e, s) {
+          BluetoothDevice(remoteId: d).connect(autoConnect: true, mtu: null).onError((e, s) {
             if (logLevel != LogLevel.none) {
               print("[FBP] [AutoConnect] connection failed: $e");
             }
@@ -568,25 +551,20 @@ class FlutterBluePlusFactory {
     }
 
     // keep track of characteristic values
-    if (call.method == "OnCharacteristicReceived" ||
-        call.method == "OnCharacteristicWritten") {
+    if (call.method == "OnCharacteristicReceived" || call.method == "OnCharacteristicWritten") {
       var r = BmCharacteristicData.fromMap(call.arguments);
       if (r.success == true) {
         _lastChrs[r.remoteId] ??= {};
-        _lastChrs[r.remoteId]!["${r.serviceUuid}:${r.characteristicUuid}"] =
-            r.value;
+        _lastChrs[r.remoteId]!["${r.serviceUuid}:${r.characteristicUuid}"] = r.value;
       }
     }
 
     // keep track of descriptor values
-    if (call.method == "OnDescriptorRead" ||
-        call.method == "OnDescriptorWritten") {
+    if (call.method == "OnDescriptorRead" || call.method == "OnDescriptorWritten") {
       var r = BmDescriptorData.fromMap(call.arguments);
       if (r.success == true) {
         _lastDescs[r.remoteId] ??= {};
-        _lastDescs[r.remoteId]![
-                "${r.serviceUuid}:${r.characteristicUuid}:${r.descriptorUuid}"] =
-            r.value;
+        _lastDescs[r.remoteId]!["${r.serviceUuid}:${r.characteristicUuid}:${r.descriptorUuid}"] = r.value;
       }
     }
 
@@ -600,8 +578,7 @@ class FlutterBluePlusFactory {
           var remoteId = r.remoteId;
           // use delayed to update the stream before we cancel it
           Future.delayed(Duration.zero).then((_) {
-            _delayedSubscriptions[remoteId]
-                ?.forEach((s) => s.cancel()); // cancel
+            _delayedSubscriptions[remoteId]?.forEach((s) => s.cancel()); // cancel
             _delayedSubscriptions.remove(remoteId); // delete
           });
         }
@@ -610,7 +587,7 @@ class FlutterBluePlusFactory {
   }
 
   /// invoke a platform method
-  Future<dynamic> _invokeMethod(
+  static Future<dynamic> _invokeMethod(
     String method, [
     dynamic arguments,
   ]) async {
@@ -706,7 +683,6 @@ enum LogLevel {
 
 class AndroidScanMode {
   const AndroidScanMode(this.value);
-
   static const lowPower = AndroidScanMode(0);
   static const balanced = AndroidScanMode(1);
   static const lowLatency = AndroidScanMode(2);
@@ -729,8 +705,7 @@ class MsdFilter {
 
   // convert to bmMsg
   BmMsdFilter get _bm {
-    assert(mask.isEmpty || (data.length == mask.length),
-        "mask & data must be same length");
+    assert(mask.isEmpty || (data.length == mask.length), "mask & data must be same length");
     return BmMsdFilter(manufacturerId, data, mask);
   }
 }
@@ -750,15 +725,13 @@ class ServiceDataFilter {
 
   // convert to bmMsg
   BmServiceDataFilter get _bm {
-    assert(mask.isEmpty || (data.length == mask.length),
-        "mask & data must be same length");
+    assert(mask.isEmpty || (data.length == mask.length), "mask & data must be same length");
     return BmServiceDataFilter(service, data, mask);
   }
 }
 
 class DeviceIdentifier {
   final String str;
-
   const DeviceIdentifier(this.str);
 
   @override
@@ -768,8 +741,7 @@ class DeviceIdentifier {
   int get hashCode => str.hashCode;
 
   @override
-  bool operator ==(other) =>
-      other is DeviceIdentifier && _compareAsciiLowerCase(str, other.str) == 0;
+  bool operator ==(other) => other is DeviceIdentifier && _compareAsciiLowerCase(str, other.str) == 0;
 
   @Deprecated('Use str instead')
   String get id => str;
@@ -796,10 +768,7 @@ class ScanResult {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ScanResult &&
-          runtimeType == other.runtimeType &&
-          device == other.device;
+      identical(this, other) || other is ScanResult && runtimeType == other.runtimeType && device == other.device;
 
   @override
   int get hashCode => device.hashCode;
@@ -928,8 +897,7 @@ class FlutterBluePlusException implements Exception {
   /// note: depends on platform
   final String? description;
 
-  FlutterBluePlusException(
-      this.platform, this.function, this.code, this.description);
+  FlutterBluePlusException(this.platform, this.function, this.code, this.description);
 
   @override
   String toString() {
