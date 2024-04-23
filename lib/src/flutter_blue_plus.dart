@@ -587,7 +587,7 @@ class FlutterBluePlusFactory {
   }
 
   /// invoke a platform method
-  static Future<dynamic> _invokeMethod(
+  Future<dynamic> _invokeMethod(
     String method, [
     dynamic arguments,
   ]) async {
