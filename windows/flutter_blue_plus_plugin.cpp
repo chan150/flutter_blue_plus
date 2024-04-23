@@ -13,6 +13,14 @@
 #include <memory>
 #include <sstream>
 
+void FlutterBluePlusPluginRegisterWithRegistrar(
+        FlutterDesktopPluginRegistrarRef registrar) {
+    flutter_blue_plus::FlutterBluePlusPlugin::RegisterWithRegistrar(
+            flutter::PluginRegistrarManager::GetInstance()
+                    ->GetRegistrar<flutter::PluginRegistrarWindows>(registrar));
+}
+
+
 namespace flutter_blue_plus {
 
 // static
