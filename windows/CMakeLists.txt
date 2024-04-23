@@ -26,7 +26,7 @@ list(APPEND PLUGIN_SOURCES
 # on PLUGIN_NAME above).
 add_library(${PLUGIN_NAME} SHARED
   "include/flutter_blue_plus/flutter_blue_plus_plugin.h"
-  "flutter_blue_plus_plugin_c_api.cpp"
+  "flutter_blue_plus_plugin.cpp"
   ${PLUGIN_SOURCES}
 )
 
