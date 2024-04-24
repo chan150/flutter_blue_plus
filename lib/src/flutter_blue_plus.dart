@@ -4,9 +4,30 @@
 
 part of flutter_blue_plus;
 
-final FlutterBluePlus = FlutterBluePlusPlatform();
+final FlutterBluePlus = FlutterBluePlusFactory();
 
-class FlutterBluePlusPlatform {
+class FlutterBluePlusFactory extends FlutterBluePlusMethodChannel{
+
+  // Future<String?> getPlatformVersion() {
+  //   return PluginTestExample_2Platform.instance.getPlatformVersion();
+  // }
+}
+
+class FlutterBluePlusMethodChannel extends FlutterBluePlusPlatform {
+  @visibleForTesting
+  final methodChannel = const MethodChannel('flutter_blue_plus/methods');
+  // Future<String?> getPlatformVersion() async {
+  //   final version = await methodChannel.invokeMethod('getPlatformVersion');
+  //   return version;
+  // }
+}
+
+abstract class FlutterBluePlusPlatform extends PlatformInterface {
+  FlutterBluePlusPlatform() : super(token: _token);
+  static final Object _token = Object();
+  static FlutterBluePlusPlatform _obj = FlutterBluePlusMethodChannel();
+  static FlutterBluePlusPlatform get obj => _obj;
+
   ///////////////////
   //  Internal
   //

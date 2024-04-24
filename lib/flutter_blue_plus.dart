@@ -7,7 +7,9 @@ library flutter_blue_plus;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 export 'src/windows/flutter_blue_plus_windows.dart';
 
