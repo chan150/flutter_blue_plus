@@ -9,6 +9,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+export 'src/windows/flutter_blue_plus_windows.dart';
+
 part 'src/bluetooth_characteristic.dart';
 part 'src/bluetooth_descriptor.dart';
 part 'src/bluetooth_device.dart';
@@ -19,3 +21,5 @@ part 'src/bluetooth_utils.dart';
 part 'src/flutter_blue_plus.dart';
 part 'src/guid.dart';
 part 'src/utils.dart';
+
+
