@@ -25,8 +25,8 @@ class FlutterBluePlusMethodChannel extends FlutterBluePlusPlatform {
 abstract class FlutterBluePlusPlatform extends PlatformInterface {
   FlutterBluePlusPlatform() : super(token: _token);
   static final Object _token = Object();
-  static FlutterBluePlusPlatform _obj = FlutterBluePlusMethodChannel();
-  static FlutterBluePlusPlatform get obj => _obj;
+  static FlutterBluePlusPlatform _instance = FlutterBluePlusMethodChannel();
+  static FlutterBluePlusPlatform get instance => _instance;
 
   ///////////////////
   //  Internal
@@ -675,8 +675,8 @@ abstract class FlutterBluePlusPlatform extends PlatformInterface {
   @Deprecated('Use systemDevices instead')
   Future<List<BluetoothDevice>> get connectedSystemDevices => systemDevices;
 
-  @Deprecated('No longer needed, remove this from your code')
-  void get instance => null;
+  // @Deprecated('No longer needed, remove this from your code')
+  // void get instance => null;
 
   @Deprecated('Use isSupported instead')
   Future<bool> get isAvailable async => await isSupported;
