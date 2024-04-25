@@ -14,7 +14,7 @@ final FlutterBluePlus = FlutterBluePlusMethodChannel();
 
 class FlutterBluePlusMethodChannel extends FlutterBluePlusPlatform {
   @visibleForTesting
-  final methodChannel = const MethodChannel('plugin_test_example_2');
+  final methodChannel = const MethodChannel('flutter_blue_plus/methods');
 }
 
 abstract class FlutterBluePlusPlatform extends PlatformInterface {
@@ -28,7 +28,7 @@ abstract class FlutterBluePlusPlatform extends PlatformInterface {
   }
 
   @visibleForTesting
-  final methodChannel = const MethodChannel('plugin_test_example_2');
+  final methodChannel = const MethodChannel('flutter_blue_plus/methods');
 
   ///////////////////
   //  Internal
