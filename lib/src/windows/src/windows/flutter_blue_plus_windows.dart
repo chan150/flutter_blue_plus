@@ -1,6 +1,10 @@
 part of 'windows.dart';
 
 class FlutterBluePlusPluginWindows extends FlutterBluePlusPlatform {
+  static void registerWith() {
+    FlutterBluePlusPlatform.instance = FlutterBluePlusPlatform();
+  }
+
   static bool _initialized = false;
 
   static BluetoothAdapterState _state = BluetoothAdapterState.unknown;

@@ -6,27 +6,22 @@ part of flutter_blue_plus;
 
 final FlutterBluePlus = FlutterBluePlusFactory();
 
-class FlutterBluePlusFactory extends FlutterBluePlusMethodChannel{
-
-  // Future<String?> getPlatformVersion() {
-  //   return PluginTestExample_2Platform.instance.getPlatformVersion();
-  // }
+class FlutterBluePlusFactory extends FlutterBluePlusPlatform{
 }
 
-class FlutterBluePlusMethodChannel extends FlutterBluePlusPlatform {
-  @visibleForTesting
-  final methodChannel = const MethodChannel('flutter_blue_plus/methods');
-  // Future<String?> getPlatformVersion() async {
-  //   final version = await methodChannel.invokeMethod('getPlatformVersion');
-  //   return version;
-  // }
-}
 
-abstract class FlutterBluePlusPlatform extends PlatformInterface {
+class FlutterBluePlusPlatform extends PlatformInterface {
   FlutterBluePlusPlatform() : super(token: _token);
   static final Object _token = Object();
-  static FlutterBluePlusPlatform _instance = FlutterBluePlusMethodChannel();
+  static FlutterBluePlusPlatform _instance = FlutterBluePlusPlatform();
   static FlutterBluePlusPlatform get instance => _instance;
+  static set instance(FlutterBluePlusPlatform instance) {
+    PlatformInterface.verifyToken(instance, _token);
+    _instance = instance;
+  }
+
+  @visibleForTesting
+  final methodChannel = const MethodChannel('flutter_blue_plus/methods');
 
   ///////////////////
   //  Internal
@@ -35,8 +30,8 @@ abstract class FlutterBluePlusPlatform extends PlatformInterface {
   bool _initialized = false;
 
   /// native platform channel
-  final MethodChannel _methodChannel =
-      const MethodChannel('flutter_blue_plus/methods');
+  // final MethodChannel _methodChannel =
+  //     const MethodChannel('flutter_blue_plus/methods');
 
   /// a broadcast stream version of the MethodChannel
   // ignore: close_sinks
@@ -439,12 +434,12 @@ abstract class FlutterBluePlusPlatform extends PlatformInterface {
     _initialized = true;
 
     // set platform method handler
-    _methodChannel.setMethodCallHandler(_methodCallHandler);
+    FlutterBluePlusPlatform.instance.methodChannel.setMethodCallHandler(_methodCallHandler);
 
     // hot restart
-    if ((await _methodChannel.invokeMethod('flutterHotRestart')) != 0) {
+    if ((await FlutterBluePlusPlatform.instance.methodChannel.invokeMethod('flutterHotRestart')) != 0) {
       await Future.delayed(Duration(milliseconds: 50));
-      while ((await _methodChannel.invokeMethod('connectedCount')) != 0) {
+      while ((await FlutterBluePlusPlatform.instance.methodChannel.invokeMethod('connectedCount')) != 0) {
         await Future.delayed(Duration(milliseconds: 50));
       }
     }
@@ -628,7 +623,7 @@ abstract class FlutterBluePlusPlatform extends PlatformInterface {
       }
 
       // invoke
-      out = await _methodChannel.invokeMethod(method, arguments);
+      out = await FlutterBluePlusPlatform.instance.methodChannel.invokeMethod(method, arguments);
 
       // log result
       if (logLevel == LogLevel.verbose) {

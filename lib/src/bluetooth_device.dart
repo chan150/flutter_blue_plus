@@ -632,7 +632,7 @@ class BluetoothDevice {
 
     // get current state if needed
     if (FlutterBluePlus._bondStates[remoteId] == null) {
-      var val = await FlutterBluePlus._methodChannel
+      var val = await FlutterBluePlusPlatform.instance.methodChannel
           .invokeMethod('getBondState', remoteId.str)
           .then((args) => BmBondStateResponse.fromMap(args));
       // update _bondStates if it is still null after the await
