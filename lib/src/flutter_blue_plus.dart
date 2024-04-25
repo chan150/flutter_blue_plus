@@ -4,19 +4,23 @@
 
 part of flutter_blue_plus;
 
-final FlutterBluePlus = FlutterBluePlusFactory();
+final FlutterBluePlus = FlutterBluePlusMethodChannel();
 
-class FlutterBluePlusFactory extends FlutterBluePlusPlatform{
-  factory FlutterBluePlusFactory() => _instance;
-  static final _instance = FlutterBluePlusFactory._internal();
-  FlutterBluePlusFactory._internal();
+// class FlutterBluePlusFactory extends FlutterBluePlusPlatform {
+//   factory FlutterBluePlusFactory() => _instance;
+//   static final _instance = FlutterBluePlusFactory._internal();
+//   FlutterBluePlusFactory._internal();
+// }
+
+class FlutterBluePlusMethodChannel extends FlutterBluePlusPlatform {
+  @visibleForTesting
+  final methodChannel = const MethodChannel('plugin_test_example_2');
 }
 
-
-class FlutterBluePlusPlatform extends PlatformInterface {
+abstract class FlutterBluePlusPlatform extends PlatformInterface {
   FlutterBluePlusPlatform() : super(token: _token);
   static final Object _token = Object();
-  static FlutterBluePlusPlatform _instance = FlutterBluePlusPlatform();
+  static FlutterBluePlusPlatform _instance = FlutterBluePlusMethodChannel();
   static FlutterBluePlusPlatform get instance => _instance;
   static set instance(FlutterBluePlusPlatform instance) {
     PlatformInterface.verifyToken(instance, _token);
@@ -24,7 +28,7 @@ class FlutterBluePlusPlatform extends PlatformInterface {
   }
 
   @visibleForTesting
-  final methodChannel = const MethodChannel('flutter_blue_plus/methods');
+  final methodChannel = const MethodChannel('plugin_test_example_2');
 
   ///////////////////
   //  Internal

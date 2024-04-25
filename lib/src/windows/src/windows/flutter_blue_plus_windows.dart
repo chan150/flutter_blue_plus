@@ -1,8 +1,8 @@
 part of 'windows.dart';
 
-class FlutterBluePlusPluginWindows extends FlutterBluePlusPlatform {
+class FlutterBluePlusPluginWindows extends FlutterBluePlusMethodChannel {
   static void registerWith() {
-    FlutterBluePlusPlatform.instance = FlutterBluePlusPlatform();
+    FlutterBluePlusPlatform.instance = FlutterBluePlusPluginWindows();
   }
 
   static bool _initialized = false;
