@@ -7,6 +7,9 @@ part of flutter_blue_plus;
 final FlutterBluePlus = FlutterBluePlusFactory();
 
 class FlutterBluePlusFactory extends FlutterBluePlusPlatform{
+  factory FlutterBluePlusFactory() => _instance;
+  static final _instance = FlutterBluePlusFactory._internal();
+  FlutterBluePlusFactory._internal();
 }
 
 
