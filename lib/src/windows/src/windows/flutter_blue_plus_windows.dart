@@ -1,6 +1,6 @@
 part of 'windows.dart';
 
-class FlutterBluePlusWindows {
+class FlutterBluePlusPluginWindows extends FlutterBluePlusPlatform {
   static void registerWith() {
     // PluginTestExample_2Platform.instance = PluginTestExampleWindows();
   }
@@ -73,27 +73,23 @@ class FlutterBluePlusWindows {
     _initialized = true;
   }
 
-  static Future<bool> get isSupported async {
-    return true;
-  }
+  Future<bool> get isSupported async => true;
 
-  static Future<String> get adapterName async {
-    return 'Windows';
-  }
+  Future<String> get adapterName async => 'Windows';
 
-  static Stream<bool> get isScanning => _isScanning.stream;
+  Stream<bool> get isScanning => _isScanning.stream;
 
-  static bool get isScanningNow => _isScanning.latestValue;
+  bool get isScanningNow => _isScanning.latestValue;
 
-  static Future<void> turnOn({int timeout = 10}) async {
+  Future<void> turnOn({int timeout = 10}) async {
     await _initialize();
     await WinBle.updateBluetoothState(true);
   }
 
   // TODO: compare with original lib
-  static Stream<List<ScanResult>> get scanResults => _scanResultsList.stream;
+  Stream<List<ScanResult>> get scanResults => _scanResultsList.stream;
 
-  static Stream<BluetoothAdapterState> get adapterState async* {
+  Stream<BluetoothAdapterState> get adapterState async* {
     await _initialize();
     yield _state;
     yield* WinBle.bleState.asBroadcastStream().map(
@@ -104,11 +100,11 @@ class FlutterBluePlusWindows {
     );
   }
 
-  static List<BluetoothDevice> get connectedDevices {
+  List<BluetoothDevice> get connectedDevices {
     return _devices;
   }
 
-  static Future<List<BluetoothDevice>> get bondedDevices async {
+  Future<List<BluetoothDevice>> get bondedDevices async {
     return _devices;
   }
 
@@ -118,11 +114,19 @@ class FlutterBluePlusWindows {
   ///   - [oneByOne] if true, we will stream every advertistment one by one, including duplicates.
   ///    If false, we deduplicate the advertisements, and return a list of devices.
   ///   - [androidUsesFineLocation] request ACCESS_FINE_LOCATION permission at runtime
-  static Future<void> startScan({
+  Future<void> startScan({
     List<Guid> withServices = const [],
+    List<String> withRemoteIds = const [],
+    List<String> withNames = const [],
+    List<String> withKeywords = const [],
+    List<MsdFilter> withMsd = const [],
+    List<ServiceDataFilter> withServiceData = const [],
     Duration? timeout,
     Duration? removeIfGone,
+    bool continuousUpdates = false,
+    int continuousDivisor = 1,
     bool oneByOne = false,
+    AndroidScanMode androidScanMode = AndroidScanMode.lowLatency,
     bool androidUsesFineLocation = false,
   }) async {
     await _initialize();
@@ -221,7 +225,7 @@ class FlutterBluePlusWindows {
   }
 
   /// Stops a scan for Bluetooth Low Energy devices
-  static Future<void> stopScan() async {
+  Future<void> stopScan() async {
     await _initialize();
     WinBle.stopScanning();
     _scanSubscription?.cancel();
@@ -232,18 +236,18 @@ class FlutterBluePlusWindows {
   }
 
   /// Sets the internal FlutterBlue log level
-  static Future<void> setLogLevel(LogLevel level, {color = true}) async {
+  Future<void> setLogLevel(LogLevel level, {color = true}) async {
     // Nothing to implement
     return;
   }
 
-  static Future<void> turnOff({int timeout = 10}) async {
+  Future<void> turnOff({int timeout = 10}) async {
     await _initialize();
     await WinBle.updateBluetoothState(false);
   }
 
   // TODO: need to test
-  static Future<bool> get isOn async {
+  Future<bool> get isOn async {
     await _initialize();
     return await WinBle.bleState.asBroadcastStream().first == BleState.On;
   }

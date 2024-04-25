@@ -27,4 +27,4 @@ flutter:
       macos:
         pluginClass: FlutterBluePlusPlugin
       windows:
-        dartPluginClass: FlutterBluePlusWindows
+        dartPluginClass: FlutterBluePlusPluginWindows
