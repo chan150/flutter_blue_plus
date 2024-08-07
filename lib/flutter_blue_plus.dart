@@ -8,6 +8,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:platform/platform.dart' as platform;
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 part 'src/bluetooth_characteristic.dart';
 part 'src/bluetooth_descriptor.dart';
@@ -17,5 +19,6 @@ part 'src/bluetooth_events.dart';
 part 'src/bluetooth_service.dart';
 part 'src/bluetooth_utils.dart';
 part 'src/flutter_blue_plus.dart';
+part 'src/flutter_blue_plus_plugin_windows.dart';
 part 'src/guid.dart';
 part 'src/utils.dart';
