@@ -1,9 +1,10 @@
 part of flutter_blue_plus;
 
-class FlutterBluePlusPluginWindows extends FlutterBluePlusPlugin {
+class FBPWindows extends FBPPlatform {
   static void registerWith() {
-    // FlutterBluePlusPlugin._methodChannel = FlutterBluePlusPluginWindows();
+    FBPPlatform.instance = FBPWindows();
   }
+
 }
 
 abstract class FBPPlatform extends PlatformInterface {
@@ -11,7 +12,7 @@ abstract class FBPPlatform extends PlatformInterface {
 
   static final Object _token = Object();
 
-  static FBPPlatform _instance = FBPPlatformProvider();
+  static FBPPlatform _instance = FBPProvider();
 
   static FBPPlatform get instance => _instance;
 
@@ -21,9 +22,9 @@ abstract class FBPPlatform extends PlatformInterface {
   }
 }
 
-class FBPPlatformProvider extends FBPPlatform {
+class FBPProvider extends FBPPlatform {
   platform.Platform _platform = const platform.LocalPlatform();
 
   MethodChannel methodChannel =
-      const MethodChannel('plugins.flutter.io/path_provider');
+      const MethodChannel('flutter_blue_plus/methods');
 }
