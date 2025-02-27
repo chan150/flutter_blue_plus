@@ -242,7 +242,7 @@ final class FlutterBluePlusWeb extends FlutterBluePlusPlatform {
       BmIsSupportedRequest request,
       ) async {
     try {
-      return (await window.navigator.bluetooth.getAvailability().toDart).toDart;
+      return (await window.navigator.bluetooth.getAvailability());
     } catch (e) {
       return false; // https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API#browser_compatibility
     }
