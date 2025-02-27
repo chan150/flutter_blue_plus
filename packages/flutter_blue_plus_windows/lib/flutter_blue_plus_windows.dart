@@ -81,7 +81,7 @@ final class FlutterBluePlusWeb extends FlutterBluePlusPlatform {
       );
     }
 
-    await gatt.connect().toDart;
+    await gatt.connect();
 
     _onConnectionStateChangedController.add(
       BmConnectionStateResponse(
@@ -152,16 +152,16 @@ final class FlutterBluePlusWeb extends FlutterBluePlusPlatform {
 
       final services = <BmBluetoothService>[];
 
-      List<BluetoothRemoteGATTService> primaryServices = (await gatt.getPrimaryServices().toDart).toDart;
+      List<BluetoothRemoteGATTService> primaryServices = gatt.getPrimaryServices();
       for (final s in primaryServices) {
         final characteristics = <BmBluetoothCharacteristic>[];
 
-        List<BluetoothRemoteGATTCharacteristic> chars = (await s.getCharacteristics().toDart).toDart;
+        List<BluetoothRemoteGATTCharacteristic> chars = s.getCharacteristics();
         for (final c in chars) {
           final descriptors = <BmBluetoothDescriptor>[];
 
           try {
-            List<BluetoothRemoteGATTDescriptor> descs = (await c.getDescriptors().toDart).toDart;
+            List<BluetoothRemoteGATTDescriptor> descs = c.getDescriptors();
             for (final d in descs) {
               descriptors.add(
                 BmBluetoothDescriptor(
