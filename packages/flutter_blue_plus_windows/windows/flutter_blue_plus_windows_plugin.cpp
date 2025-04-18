@@ -14,6 +14,14 @@
 #include <vector>
 
 namespace flutter_blue_plus_windows {
+enum LogLevel {
+  LNONE = 0,
+  LERROR = 1,
+  LWARNING = 2,
+  LINFO = 3,
+  LDEBUG = 4,
+  LVERBOSE = 5,
+};
 
 // static
 void FlutterBluePlusWindowsPlugin::RegisterWithRegistrar(
