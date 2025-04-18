@@ -1,715 +1,552 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus_platform_interface/flutter_blue_plus_platform_interface.dart';
 
 final class FlutterBluePlusWindows extends FlutterBluePlusPlatform {
+  @visibleForTesting
+  final methodChannel = const MethodChannel('flutter_blue_plus/methods');
 
+  var _initialized = false;
+  var _logLevel = LogLevel.none;
+  var _logColor = true;
+
+  final _onAdapterStateChangedController = StreamController<BmBluetoothAdapterState>.broadcast();
+  final _onBondStateChangedController = StreamController<BmBondStateResponse>.broadcast();
+  final _onCharacteristicReceivedController = StreamController<BmCharacteristicData>.broadcast();
+  final _onCharacteristicWrittenController = StreamController<BmCharacteristicData>.broadcast();
+  final _onConnectionStateChangedController = StreamController<BmConnectionStateResponse>.broadcast();
+  final _onDescriptorReadController = StreamController<BmDescriptorData>.broadcast();
+  final _onDescriptorWrittenController = StreamController<BmDescriptorData>.broadcast();
+  final _onDetachedFromEngineController = StreamController<BmDetachedFromEngineResponse>.broadcast();
+  final _onDiscoveredServicesController = StreamController<BmDiscoverServicesResult>.broadcast();
+  final _onMtuChangedController = StreamController<BmMtuChangedResponse>.broadcast();
+  final _onNameChangedController = StreamController<BmNameChanged>.broadcast();
+  final _onReadRssiController = StreamController<BmReadRssiResult>.broadcast();
+  final _onScanResponseController = StreamController<BmScanResponse>.broadcast();
+  final _onServicesResetController = StreamController<BmBluetoothDevice>.broadcast();
+
+  @override
+  Stream<BmBluetoothAdapterState> get onAdapterStateChanged {
+    return _onAdapterStateChangedController.stream;
+  }
+
+  @override
+  Stream<BmBondStateResponse> get onBondStateChanged {
+    return _onBondStateChangedController.stream;
+  }
+
+  @override
+  Stream<BmCharacteristicData> get onCharacteristicReceived {
+    return _onCharacteristicReceivedController.stream;
+  }
+
+  @override
+  Stream<BmCharacteristicData> get onCharacteristicWritten {
+    return _onCharacteristicWrittenController.stream;
+  }
+
+  @override
+  Stream<BmConnectionStateResponse> get onConnectionStateChanged {
+    return _onConnectionStateChangedController.stream;
+  }
+
+  @override
+  Stream<BmDescriptorData> get onDescriptorRead {
+    return _onDescriptorReadController.stream;
+  }
+
+  @override
+  Stream<BmDescriptorData> get onDescriptorWritten {
+    return _onDescriptorWrittenController.stream;
+  }
+
+  @override
+  Stream<BmDetachedFromEngineResponse> get onDetachedFromEngine {
+    return _onDetachedFromEngineController.stream;
+  }
+
+  @override
+  Stream<BmDiscoverServicesResult> get onDiscoveredServices {
+    return _onDiscoveredServicesController.stream;
+  }
+
+  @override
+  Stream<BmMtuChangedResponse> get onMtuChanged {
+    return _onMtuChangedController.stream;
+  }
+
+  @override
+  Stream<BmNameChanged> get onNameChanged {
+    return _onNameChangedController.stream;
+  }
+
+  @override
+  Stream<BmReadRssiResult> get onReadRssi {
+    return _onReadRssiController.stream;
+  }
+
+  @override
+  Stream<BmScanResponse> get onScanResponse {
+    return _onScanResponseController.stream;
+  }
+
+  @override
+  Stream<BmBluetoothDevice> get onServicesReset {
+    return _onServicesResetController.stream;
+  }
+
+  static void registerWith() {
+    FlutterBluePlusPlatform.instance = FlutterBluePlusWindows();
+  }
+
+  @override
+  Future<bool> clearGattCache(
+    BmClearGattCacheRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'clearGattCache',
+      request.remoteId.str,
+    ) == true;
+  }
+
+  @override
+  Future<bool> connect(
+    BmConnectRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'connect',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> createBond(
+    BmCreateBondRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'createBond',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> disconnect(
+    BmDisconnectRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'disconnect',
+      request.remoteId.str,
+    ) == true;
+  }
+
+  @override
+  Future<bool> discoverServices(
+    BmDiscoverServicesRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'discoverServices',
+      request.remoteId.str,
+    ) == true;
+  }
+
+  @override
+  Future<BmBluetoothAdapterName> getAdapterName(
+    BmBluetoothAdapterNameRequest request,
+  ) async {
+    return BmBluetoothAdapterName(
+      adapterName: await _invokeMethod(
+        'getAdapterName',
+      ),
+    );
+  }
+
+  @override
+  Future<BmBluetoothAdapterState> getAdapterState(
+    BmBluetoothAdapterStateRequest request,
+  ) async {
+    return BmBluetoothAdapterState.fromMap(
+      await _invokeMethod(
+        'getAdapterState',
+      ),
+    );
+  }
+
+  @override
+  Future<BmBondStateResponse> getBondState(
+    BmBondStateRequest request,
+  ) async {
+    return BmBondStateResponse.fromMap(
+      await _invokeMethod(
+        'getBondState',
+        request.remoteId.str,
+      ),
+    );
+  }
+
+  @override
+  Future<BmDevicesList> getBondedDevices(
+    BmBondedDevicesRequest request,
+  ) async {
+    return BmDevicesList.fromMap(
+      await _invokeMethod(
+        'getBondedDevices',
+      ),
+    );
+  }
+
+  @override
+  Future<PhySupport> getPhySupport(
+    PhySupportRequest request,
+  ) async {
+    return PhySupport.fromMap(
+      await _invokeMethod(
+        'getPhySupport',
+      ),
+    );
+  }
+
+  @override
+  Future<BmDevicesList> getSystemDevices(
+    BmSystemDevicesRequest request,
+  ) async {
+    return BmDevicesList.fromMap(
+      await _invokeMethod(
+        'getSystemDevices',
+      ),
+    );
+  }
+
+  @override
+  Future<bool> isSupported(
+    BmIsSupportedRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'isSupported',
+    ) == true;
+  }
+
+  @override
+  Future<bool> readCharacteristic(
+    BmReadCharacteristicRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'readCharacteristic',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> readDescriptor(
+    BmReadDescriptorRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'readDescriptor',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> readRssi(
+    BmReadRssiRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'readRssi',
+      request.remoteId.str,
+    ) == true;
+  }
+
+  @override
+  Future<bool> removeBond(
+    BmRemoveBondRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'removeBond',
+      request.remoteId.str,
+    ) == true;
+  }
+
+  @override
+  Future<bool> requestConnectionPriority(
+    BmConnectionPriorityRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'requestConnectionPriority',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> requestMtu(
+    BmMtuChangeRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'requestMtu',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> setLogLevel(
+    BmSetLogLevelRequest request,
+  ) async {
+    _logLevel = request.logLevel;
+    _logColor = request.logColor;
+
+    return await _invokeMethod<bool>(
+      'setLogLevel',
+      request.logLevel.index,
+    ) == true;
+  }
+
+  @override
+  Future<bool> setNotifyValue(
+    BmSetNotifyValueRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'setNotifyValue',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> setOptions(
+    BmSetOptionsRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'setOptions',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> setPreferredPhy(
+    BmPreferredPhy request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'setPreferredPhy',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> startScan(
+    BmScanSettings request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'startScan',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> stopScan(
+    BmStopScanRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'stopScan',
+    ) == true;
+  }
+
+  @override
+  Future<bool> turnOff(
+    BmTurnOffRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'turnOff',
+    ) == true;
+  }
+
+  @override
+  Future<bool> turnOn(
+    BmTurnOnRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'turnOn',
+    ) == true;
+  }
+
+  @override
+  Future<bool> writeCharacteristic(
+    BmWriteCharacteristicRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'writeCharacteristic',
+      request.toMap(),
+    ) == true;
+  }
+
+  @override
+  Future<bool> writeDescriptor(
+    BmWriteDescriptorRequest request,
+  ) async {
+    return await _invokeMethod<bool>(
+      'writeDescriptor',
+      request.toMap(),
+    ) == true;
+  }
+
+  Future<T?> _invokeMethod<T>(
+    String method, [
+    dynamic arguments,
+  ]) async {
+    // initialize
+    await _initFlutterBluePlus();
+
+    // log args
+    if (_logLevel == LogLevel.verbose) {
+      var func = '<$method>';
+      var args = arguments.toString();
+      func = _logColor ? '\x1B[1;30m$func\x1B[0m' : func;
+      args = _logColor ? '\x1B[1;35m$args\x1B[0m' : args;
+      print('[FBP] $func args: $args');
+    }
+
+    // invoke
+    final out = await methodChannel.invokeMethod<T>(method, arguments);
+
+    // log result
+    if (_logLevel == LogLevel.verbose) {
+      var func = '($method)';
+      var result = out.toString();
+      func = _logColor ? '\x1B[1;30m$func\x1B[0m' : func;
+      result = _logColor ? '\x1B[1;33m$result\x1B[0m' : result;
+      print('[FBP] $func result: $result');
+    }
+
+    return out;
+  }
+
+  Future<void> _initFlutterBluePlus() async {
+    if (_initialized) {
+      return;
+    }
+
+    _initialized = true;
+
+    // set platform method handler
+    methodChannel.setMethodCallHandler(_methodCallHandler);
+
+    // flutter restart - wait for all devices to disconnect
+    if ((await methodChannel.invokeMethod('flutterRestart')) != 0) {
+      await Future.delayed(Duration(milliseconds: 50));
+      while ((await methodChannel.invokeMethod('connectedCount')) != 0) {
+        await Future.delayed(Duration(milliseconds: 50));
+      }
+    }
+  }
+
+  Future<void> _methodCallHandler(
+    MethodCall call,
+  ) async {
+    // log result
+    if (_logLevel == LogLevel.verbose) {
+      var func = '[[ ${call.method} ]]';
+      var result = switch (call.method) {
+        'OnDiscoveredServices' => _prettyPrint(call.arguments),
+        _ => call.arguments.toString(),
+      };
+      func = _logColor ? '\x1B[1;30m$func\x1B[0m' : func;
+      result = _logColor ? '\x1B[1;33m$result\x1B[0m' : result;
+      print('[FBP] $func result: $result');
+    }
+
+    // handle method call
+    switch (call.method) {
+      case 'OnAdapterStateChanged':
+        return _onAdapterStateChangedController.add(
+          BmBluetoothAdapterState.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnBondStateChanged':
+        return _onBondStateChangedController.add(
+          BmBondStateResponse.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnCharacteristicReceived':
+        return _onCharacteristicReceivedController.add(
+          BmCharacteristicData.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnCharacteristicWritten':
+        return _onCharacteristicWrittenController.add(
+          BmCharacteristicData.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnConnectionStateChanged':
+        return _onConnectionStateChangedController.add(
+          BmConnectionStateResponse.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnDescriptorRead':
+        return _onDescriptorReadController.add(
+          BmDescriptorData.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnDescriptorWritten':
+        return _onDescriptorWrittenController.add(
+          BmDescriptorData.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnDetachedFromEngine':
+        return _onDetachedFromEngineController.add(
+          BmDetachedFromEngineResponse(),
+        );
+      case 'OnDiscoveredServices':
+        return _onDiscoveredServicesController.add(
+          BmDiscoverServicesResult.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnMtuChanged':
+        return _onMtuChangedController.add(
+          BmMtuChangedResponse.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnNameChanged':
+        return _onNameChangedController.add(
+          BmNameChanged.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnReadRssi':
+        return _onReadRssiController.add(
+          BmReadRssiResult.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnScanResponse':
+        return _onScanResponseController.add(
+          BmScanResponse.fromMap(
+            call.arguments,
+          ),
+        );
+      case 'OnServicesReset':
+        return _onServicesResetController.add(
+          BmBluetoothDevice.fromMap(
+            call.arguments,
+          ),
+        );
+    }
+  }
+
+  String _prettyPrint(
+    dynamic data,
+  ) {
+    if (data is Map || data is List) {
+      return JsonEncoder.withIndent('  ').convert(data);
+    } else {
+      return data.toString();
+    }
+  }
 }
-
-// import 'dart:async';
-// import 'dart:js_interop';
-// import 'dart:typed_data';
-//
-// import 'package:flutter_blue_plus_platform_interface/flutter_blue_plus_platform_interface.dart';
-// import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-// import 'src/windows_bluetooth.dart';
-//
-// final class FlutterBluePlusWindows extends FlutterBluePlusPlatform {
-//   late final _characteristicValueChangedEventListener = _handleCharacteristicValueChanged.toJS;
-//
-//   final _devices = <DeviceIdentifier, BluetoothDevice>{};
-//
-//   final _onCharacteristicReceivedController = StreamController<BmCharacteristicData>.broadcast();
-//   final _onCharacteristicWrittenController = StreamController<BmCharacteristicData>.broadcast();
-//   final _onConnectionStateChangedController = StreamController<BmConnectionStateResponse>.broadcast();
-//   final _onDescriptorReadController = StreamController<BmDescriptorData>.broadcast();
-//   final _onDescriptorWrittenController = StreamController<BmDescriptorData>.broadcast();
-//   final _onDevicesChangedController = StreamController<List<BluetoothDevice>>.broadcast();
-//   final _onDiscoveredServicesController = StreamController<BmDiscoverServicesResult>.broadcast();
-//   final _onScanResponseController = StreamController<BmScanResponse>.broadcast();
-//
-//   @override
-//   Stream<BmCharacteristicData> get onCharacteristicReceived {
-//     return _onCharacteristicReceivedController.stream;
-//   }
-//
-//   @override
-//   Stream<BmCharacteristicData> get onCharacteristicWritten {
-//     return _onCharacteristicWrittenController.stream;
-//   }
-//
-//   @override
-//   Stream<BmConnectionStateResponse> get onConnectionStateChanged {
-//     return _onConnectionStateChangedController.stream;
-//   }
-//
-//   @override
-//   Stream<BmDescriptorData> get onDescriptorRead {
-//     return _onDescriptorReadController.stream;
-//   }
-//
-//   @override
-//   Stream<BmDescriptorData> get onDescriptorWritten {
-//     return _onDescriptorWrittenController.stream;
-//   }
-//
-//   @override
-//   Stream<BmDiscoverServicesResult> get onDiscoveredServices {
-//     return _onDiscoveredServicesController.stream;
-//   }
-//
-//   @override
-//   Stream<BmScanResponse> get onScanResponse {
-//     return _onScanResponseController.stream;
-//   }
-//
-//   static void registerWith(
-//       Registrar registrar,
-//       ) {
-//     FlutterBluePlusPlatform.instance = FlutterBluePlusWeb();
-//   }
-//
-//   @override
-//   Future<bool> connect(
-//       BmConnectRequest request,
-//       ) async {
-//     final device = _devices[request.remoteId];
-//
-//     if (device == null) {
-//       throw Exception(
-//         'The device "${request.remoteId}" could not be found.',
-//       );
-//     }
-//
-//     final gatt = device.gatt;
-//
-//     if (gatt == null) {
-//       throw Exception(
-//         'The gatt for the device "${request.remoteId}" is null.',
-//       );
-//     }
-//
-//     await gatt.connect();
-//
-//     _onConnectionStateChangedController.add(
-//       BmConnectionStateResponse(
-//         remoteId: device.remoteId,
-//         connectionState: BmConnectionStateEnum.connected,
-//         disconnectReasonCode: null,
-//         disconnectReasonString: null,
-//       ),
-//     );
-//
-//     return true;
-//   }
-//
-//   @override
-//   Future<bool> disconnect(
-//       BmDisconnectRequest request,
-//       ) async {
-//     final device = _devices[request.remoteId];
-//
-//     if (device == null) {
-//       throw Exception(
-//         'The device "${request.remoteId}" could not be found.',
-//       );
-//     }
-//
-//     final gatt = device.gatt;
-//
-//     if (gatt == null) {
-//       throw Exception(
-//         'The gatt for the device "${request.remoteId}" is null.',
-//       );
-//     }
-//
-//     gatt.disconnect();
-//
-//     _onConnectionStateChangedController.add(
-//       BmConnectionStateResponse(
-//         remoteId: device.remoteId,
-//         connectionState: BmConnectionStateEnum.disconnected,
-//         disconnectReasonCode: null,
-//         disconnectReasonString: null,
-//       ),
-//     );
-//
-//     return true;
-//   }
-//
-//   @override
-//   Future<bool> discoverServices(
-//       BmDiscoverServicesRequest request,
-//       ) async {
-//     try {
-//       final device = _devices[request.remoteId];
-//
-//       if (device == null) {
-//         throw Exception(
-//           'The device "${request.remoteId}" could not be found.',
-//         );
-//       }
-//
-//       final gatt = device.gatt;
-//
-//       if (gatt == null) {
-//         throw Exception(
-//           'The gatt for the device "${request.remoteId}" is null.',
-//         );
-//       }
-//
-//       final services = <BmBluetoothService>[];
-//
-//       List<BluetoothRemoteGATTService> primaryServices = gatt.getPrimaryServices();
-//       for (final s in primaryServices) {
-//         final characteristics = <BmBluetoothCharacteristic>[];
-//
-//         List<BluetoothRemoteGATTCharacteristic> chars = s.getCharacteristics();
-//         for (final c in chars) {
-//           final descriptors = <BmBluetoothDescriptor>[];
-//
-//           try {
-//             List<BluetoothRemoteGATTDescriptor> descs = c.getDescriptors();
-//             for (final d in descs) {
-//               descriptors.add(
-//                 BmBluetoothDescriptor(
-//                   remoteId: device.remoteId,
-//                   serviceUuid: Guid.fromString(s.uuid),
-//                   characteristicUuid: Guid.fromString(c.uuid),
-//                   descriptorUuid: Guid.fromString(d.uuid),
-//                   primaryServiceUuid: null,
-//                 ),
-//               );
-//             }
-//           } catch(e) {
-//             // ignore errors when getting characteristics descriptors
-//           }
-//
-//           characteristics.add(
-//             BmBluetoothCharacteristic(
-//               remoteId: device.remoteId,
-//               serviceUuid: Guid.fromString(s.uuid),
-//               characteristicUuid: Guid.fromString(c.uuid),
-//               primaryServiceUuid: null,
-//               descriptors: descriptors,
-//               properties: BmCharacteristicProperties(
-//                 broadcast: c.properties.broadcast,
-//                 read: c.properties.read,
-//                 writeWithoutResponse: c.properties.writeWithoutResponse,
-//                 write: c.properties.write,
-//                 notify: c.properties.notify,
-//                 indicate: c.properties.indicate,
-//                 authenticatedSignedWrites:
-//                 c.properties.authenticatedSignedWrites,
-//                 extendedProperties: false,
-//                 notifyEncryptionRequired: false,
-//                 indicateEncryptionRequired: false,
-//               ),
-//             ),
-//           );
-//         }
-//
-//         services.add(
-//           BmBluetoothService(
-//             serviceUuid: Guid.fromString(s.uuid),
-//             remoteId: device.remoteId,
-//             characteristics: characteristics,
-//             primaryServiceUuid: null,
-//           ),
-//         );
-//       }
-//
-//       _onDiscoveredServicesController.add(
-//         BmDiscoverServicesResult(
-//           remoteId: device.remoteId,
-//           services: services,
-//           success: true,
-//           errorCode: 0,
-//           errorString: '',
-//         ),
-//       );
-//
-//       return true;
-//     } catch (e) {
-//       _onDiscoveredServicesController.add(
-//         BmDiscoverServicesResult(
-//           remoteId: request.remoteId,
-//           services: [],
-//           success: false,
-//           errorCode: 0,
-//           errorString: e.toString(),
-//         ),
-//       );
-//
-//       return false;
-//     }
-//   }
-//
-//   @override
-//   Future<bool> isSupported(
-//       BmIsSupportedRequest request,
-//       ) async {
-//     try {
-//       return (await window.navigator.bluetooth.getAvailability());
-//     } catch (e) {
-//       return false; // https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API#browser_compatibility
-//     }
-//   }
-//
-//   @override
-//   Future<BmBluetoothAdapterState> getAdapterState(
-//       BmBluetoothAdapterStateRequest request,
-//       ) {
-//     return isSupported(BmIsSupportedRequest()).then(
-//           (supported) => BmBluetoothAdapterState(
-//         adapterState: supported ? BmAdapterStateEnum.on : BmAdapterStateEnum.unknown,
-//       ),
-//     );
-//   }
-//
-//   @override
-//   Future<bool> readCharacteristic(
-//       BmReadCharacteristicRequest request,
-//       ) async {
-//     try {
-//       final device = _devices[request.remoteId];
-//
-//       if (device == null) {
-//         throw Exception(
-//           'The device "${request.remoteId}" could not be found.',
-//         );
-//       }
-//
-//       final gatt = device.gatt;
-//
-//       if (gatt == null) {
-//         throw Exception(
-//           'The gatt for the device "${request.remoteId}" is null.',
-//         );
-//       }
-//
-//       final service =
-//       await gatt.getPrimaryService(request.serviceUuid.str128).toDart;
-//
-//       final characteristic = await service
-//           .getCharacteristic(request.characteristicUuid.str128.toJS)
-//           .toDart;
-//
-//       final value = (await characteristic.readValue().toDart).toDart;
-//
-//       _onCharacteristicReceivedController.add(
-//         BmCharacteristicData(
-//           remoteId: device.remoteId,
-//           serviceUuid: Guid.fromString(service.uuid),
-//           characteristicUuid: Guid.fromString(characteristic.uuid),
-//           primaryServiceUuid: null,
-//           value: value.buffer.asUint8List(),
-//           success: true,
-//           errorCode: 0,
-//           errorString: '',
-//         ),
-//       );
-//
-//       return true;
-//     } catch (e) {
-//       _onCharacteristicReceivedController.add(
-//         BmCharacteristicData(
-//           remoteId: request.remoteId,
-//           serviceUuid: request.serviceUuid,
-//           characteristicUuid: request.characteristicUuid,
-//           primaryServiceUuid: null,
-//           value: [],
-//           success: false,
-//           errorCode: 0,
-//           errorString: e.toString(),
-//         ),
-//       );
-//
-//       return false;
-//     }
-//   }
-//
-//   @override
-//   Future<bool> readDescriptor(
-//       BmReadDescriptorRequest request,
-//       ) async {
-//     try {
-//       final device = _devices[request.remoteId];
-//
-//       if (device == null) {
-//         throw Exception(
-//           'The device "${request.remoteId}" could not be found.',
-//         );
-//       }
-//
-//       final gatt = device.gatt;
-//
-//       if (gatt == null) {
-//         throw Exception(
-//           'The gatt for the device "${request.remoteId}" is null.',
-//         );
-//       }
-//
-//       final service =
-//       await gatt.getPrimaryService(request.serviceUuid.str128.toJS).toDart;
-//
-//       final characteristic = await service
-//           .getCharacteristic(request.characteristicUuid.str128.toJS)
-//           .toDart;
-//
-//       final descriptor = await characteristic
-//           .getDescriptor(request.characteristicUuid.str128.toJS)
-//           .toDart;
-//
-//       final value = (await descriptor.readValue().toDart).toDart;
-//
-//       _onDescriptorReadController.add(
-//         BmDescriptorData(
-//           remoteId: device.remoteId,
-//           serviceUuid: Guid.fromString(service.uuid),
-//           characteristicUuid: Guid.fromString(characteristic.uuid),
-//           descriptorUuid: Guid.fromString(descriptor.uuid),
-//           primaryServiceUuid: null,
-//           value: value.buffer.asUint8List(),
-//           success: true,
-//           errorCode: 0,
-//           errorString: '',
-//         ),
-//       );
-//
-//       return true;
-//     } catch (e) {
-//       _onDescriptorReadController.add(
-//         BmDescriptorData(
-//           remoteId: request.remoteId,
-//           serviceUuid: request.serviceUuid,
-//           characteristicUuid: request.characteristicUuid,
-//           descriptorUuid: request.descriptorUuid,
-//           primaryServiceUuid: null,
-//           value: [],
-//           success: false,
-//           errorCode: 0,
-//           errorString: e.toString(),
-//         ),
-//       );
-//
-//       return false;
-//     }
-//   }
-//
-//   @override
-//   Future<bool> setNotifyValue(
-//       BmSetNotifyValueRequest request,
-//       ) async {
-//     final device = _devices[request.remoteId];
-//
-//     if (device == null) {
-//       throw Exception(
-//         'The device "${request.remoteId}" could not be found.',
-//       );
-//     }
-//
-//     final gatt = device.gatt;
-//
-//     if (gatt == null) {
-//       throw Exception(
-//         'The gatt for the device "${request.remoteId}" is null.',
-//       );
-//     }
-//
-//     final service =
-//     await gatt.getPrimaryService(request.serviceUuid.str128.toJS).toDart;
-//
-//     final characteristic = await service
-//         .getCharacteristic(request.characteristicUuid.str128.toJS)
-//         .toDart;
-//
-//     if (request.enable) {
-//       characteristic.addEventListener(
-//         'characteristicvaluechanged',
-//         _characteristicValueChangedEventListener,
-//       );
-//
-//       await characteristic.startNotifications().toDart;
-//     } else {
-//       await characteristic.stopNotifications().toDart;
-//
-//       characteristic.removeEventListener(
-//         'characteristicvaluechanged',
-//         _characteristicValueChangedEventListener,
-//       );
-//     }
-//
-//     return true;
-//   }
-//
-//   @override
-//   Future<bool> startScan(
-//       BmScanSettings request,
-//       ) async {
-//     try {
-//       final filters = <BluetoothLEScanFilterInit>[];
-//
-//       for (final service in request.withServices) {
-//         filters.add(
-//           BluetoothLEScanFilterInit(
-//             services: [
-//               service.str128.toJS,
-//             ].toJS,
-//           ),
-//         );
-//       }
-//
-//       for (final name in request.withNames) {
-//         filters.add(
-//           BluetoothLEScanFilterInit(
-//             name: name,
-//           ),
-//         );
-//       }
-//
-//       for (final manufacturerData in request.withMsd) {
-//         filters.add(
-//           BluetoothLEScanFilterInit(
-//             manufacturerData: [
-//               BluetoothManufacturerDataFilterInit(
-//                 companyIdentifier: manufacturerData.manufacturerId,
-//               ),
-//             ].toJS,
-//           ),
-//         );
-//       }
-//
-//       for (final serviceData in request.withServiceData) {
-//         filters.add(
-//           BluetoothLEScanFilterInit(
-//             serviceData: [
-//               BluetoothServiceDataFilterInit(
-//                 service: serviceData.service.str128.toJS,
-//               ),
-//             ].toJS,
-//           ),
-//         );
-//       }
-//
-//       final RequestDeviceOptions options;
-//
-//       if (filters.length > 0) {
-//         options = RequestDeviceOptions(
-//           filters: filters.toJS,
-//           optionalServices: request.webOptionalServices.map((e) => e.str128.toJS).toList().toJS,
-//         );
-//       } else {
-//         // https://developer.mozilla.org/en-US/docs/Web/API/Bluetooth/requestDevice#acceptalldevices
-//         options = RequestDeviceOptions(
-//           acceptAllDevices: true,
-//           optionalServices: request.webOptionalServices.map((e) => e.str128.toJS).toList().toJS,
-//         );
-//       }
-//
-//       final device =
-//       await window.navigator.bluetooth.requestDevice(options).toDart;
-//
-//       _devices[device.remoteId] = device;
-//       _onDevicesChangedController.add([..._devices.values]);
-//
-//       _onScanResponseController.add(
-//         BmScanResponse(
-//           advertisements: [
-//             BmScanAdvertisement(
-//               remoteId: device.remoteId,
-//               platformName: device.name,
-//               advName: null,
-//               connectable: true,
-//               txPowerLevel: null,
-//               appearance: null,
-//               manufacturerData: {},
-//               serviceData: {},
-//               serviceUuids: [],
-//               rssi: 0,
-//             ),
-//           ],
-//           success: true,
-//           errorCode: 0,
-//           errorString: '',
-//         ),
-//       );
-//
-//       return true;
-//     } catch (e) {
-//       _onScanResponseController.add(
-//         BmScanResponse(
-//           advertisements: [],
-//           success: false,
-//           errorCode: 0,
-//           errorString: e.toString(),
-//         ),
-//       );
-//
-//       return false;
-//     }
-//   }
-//
-//   @override
-//   Future<bool> writeCharacteristic(
-//       BmWriteCharacteristicRequest request,
-//       ) async {
-//     try {
-//       final device = _devices[request.remoteId];
-//
-//       if (device == null) {
-//         throw Exception(
-//           'The device "${request.remoteId}" could not be found.',
-//         );
-//       }
-//
-//       final gatt = device.gatt;
-//
-//       if (gatt == null) {
-//         throw Exception(
-//           'The gatt for the device "${request.remoteId}" is null.',
-//         );
-//       }
-//
-//       final service =
-//       await gatt.getPrimaryService(request.serviceUuid.str128.toJS).toDart;
-//
-//       final characteristic = await service
-//           .getCharacteristic(request.characteristicUuid.str128.toJS)
-//           .toDart;
-//
-//       if (request.writeType == BmWriteType.withResponse) {
-//         await characteristic
-//             .writeValueWithResponse(Uint8List.fromList(request.value).toJS)
-//             .toDart;
-//       } else {
-//         await characteristic
-//             .writeValueWithoutResponse(Uint8List.fromList(request.value).toJS)
-//             .toDart;
-//       }
-//
-//       _onCharacteristicWrittenController.add(
-//         BmCharacteristicData(
-//           remoteId: device.remoteId,
-//           serviceUuid: Guid.fromString(service.uuid),
-//           characteristicUuid: Guid.fromString(characteristic.uuid),
-//           primaryServiceUuid: null,
-//           value: request.value,
-//           success: true,
-//           errorCode: 0,
-//           errorString: '',
-//         ),
-//       );
-//
-//       return true;
-//     } catch (e) {
-//       _onCharacteristicWrittenController.add(
-//         BmCharacteristicData(
-//           remoteId: request.remoteId,
-//           serviceUuid: request.serviceUuid,
-//           characteristicUuid: request.characteristicUuid,
-//           primaryServiceUuid: null,
-//           value: request.value,
-//           success: false,
-//           errorCode: 0,
-//           errorString: e.toString(),
-//         ),
-//       );
-//
-//       return false;
-//     }
-//   }
-//
-//   @override
-//   Future<bool> writeDescriptor(
-//       BmWriteDescriptorRequest request,
-//       ) async {
-//     try {
-//       final device = _devices[request.remoteId];
-//
-//       if (device == null) {
-//         throw Exception(
-//           'The device "${request.remoteId}" could not be found.',
-//         );
-//       }
-//
-//       final gatt = device.gatt;
-//
-//       if (gatt == null) {
-//         throw Exception(
-//           'The gatt for the device "${request.remoteId}" is null.',
-//         );
-//       }
-//
-//       final service =
-//       await gatt.getPrimaryService(request.serviceUuid.str128.toJS).toDart;
-//
-//       final characteristic = await service
-//           .getCharacteristic(request.characteristicUuid.str128.toJS)
-//           .toDart;
-//
-//       final descriptor = await characteristic
-//           .getDescriptor(request.characteristicUuid.str128.toJS)
-//           .toDart;
-//
-//       await descriptor
-//           .writeValue(Uint8List.fromList(request.value).toJS)
-//           .toDart;
-//
-//       _onDescriptorWrittenController.add(
-//         BmDescriptorData(
-//           remoteId: device.remoteId,
-//           serviceUuid: Guid.fromString(service.uuid),
-//           characteristicUuid: Guid.fromString(characteristic.uuid),
-//           descriptorUuid: Guid.fromString(descriptor.uuid),
-//           primaryServiceUuid: null,
-//           value: request.value,
-//           success: true,
-//           errorCode: 0,
-//           errorString: '',
-//         ),
-//       );
-//
-//       return true;
-//     } catch (e) {
-//       _onDescriptorWrittenController.add(
-//         BmDescriptorData(
-//           remoteId: request.remoteId,
-//           serviceUuid: request.serviceUuid,
-//           characteristicUuid: request.characteristicUuid,
-//           descriptorUuid: request.descriptorUuid,
-//           primaryServiceUuid: null,
-//           value: request.value,
-//           success: false,
-//           errorCode: 0,
-//           errorString: e.toString(),
-//         ),
-//       );
-//
-//       return false;
-//     }
-//   }
-//
-//   void _handleCharacteristicValueChanged(
-//       Event event,
-//       ) {
-//     final characteristic = event.target as BluetoothRemoteGATTCharacteristic;
-//
-//     _onCharacteristicReceivedController.add(
-//       BmCharacteristicData(
-//         remoteId: characteristic.service.device.remoteId,
-//         serviceUuid: Guid.fromString(characteristic.service.uuid),
-//         characteristicUuid: Guid.fromString(characteristic.uuid),
-//         primaryServiceUuid: null,
-//         value: characteristic.value?.toDart.buffer.asUint8List() ?? [],
-//         success: true,
-//         errorCode: 0,
-//         errorString: '',
-//       ),
-//     );
-//   }
-// }
-//
-// extension on BluetoothDevice {
-//   DeviceIdentifier get remoteId {
-//     return DeviceIdentifier(id);
-//   }
-// }

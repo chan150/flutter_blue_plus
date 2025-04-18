@@ -8,9 +8,9 @@
 #include <string>
 #include <variant>
 
-#include "flutter_blue_plus_windows_plugin.h"
+#include "flutter_blue_plus_plugin.h"
 
-namespace flutter_blue_plus_windows {
+namespace flutter_blue_plus_plugin {
 namespace test {
 
 namespace {
@@ -22,8 +22,8 @@ using flutter::MethodResultFunctions;
 
 }  // namespace
 
-TEST(FlutterBluePlusWindowsPlugin, GetPlatformVersion) {
-  FlutterBluePlusWindowsPlugin plugin;
+TEST(FlutterBluePlusPlugin, GetPlatformVersion) {
+  FlutterBluePlusPlugin plugin;
   // Save the reply value from the success callback.
   std::string result_string;
   plugin.HandleMethodCall(
@@ -40,4 +40,4 @@ TEST(FlutterBluePlusWindowsPlugin, GetPlatformVersion) {
 }
 
 }  // namespace test
-}  // namespace flutter_blue_plus_windows
+}  // namespace flutter_blue_plus_plugin

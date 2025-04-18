@@ -1,4 +1,4 @@
-#include "flutter_blue_plus_windows_plugin.h"
+#include "flutter_blue_plus_plugin.h"
 
 // This must be included before many other Windows headers.
 #include <windows.h>
@@ -13,17 +13,17 @@
 #include <memory>
 #include <sstream>
 
-namespace flutter_blue_plus_windows {
+namespace flutter_blue_plus_plugin {
 
 // static
-void FlutterBluePlusWindowsPlugin::RegisterWithRegistrar(
+void FlutterBluePlusPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows *registrar) {
   auto channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          registrar->messenger(), "flutter_blue_plus_windows",
+          registrar->messenger(), "flutter_blue_plus_plugin",
           &flutter::StandardMethodCodec::GetInstance());
 
-  auto plugin = std::make_unique<FlutterBluePlusWindowsPlugin>();
+  auto plugin = std::make_unique<FlutterBluePlusPlugin>();
 
   channel->SetMethodCallHandler(
       [plugin_pointer = plugin.get()](const auto &call, auto result) {
@@ -33,11 +33,11 @@ void FlutterBluePlusWindowsPlugin::RegisterWithRegistrar(
   registrar->AddPlugin(std::move(plugin));
 }
 
-FlutterBluePlusWindowsPlugin::FlutterBluePlusWindowsPlugin() {}
+FlutterBluePlusPlugin::FlutterBluePlusPlugin() {}
 
-FlutterBluePlusWindowsPlugin::~FlutterBluePlusWindowsPlugin() {}
+FlutterBluePlusPlugin::~FlutterBluePlusPlugin() {}
 
-void FlutterBluePlusWindowsPlugin::HandleMethodCall(
+void FlutterBluePlusPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
   if (method_call.method_name().compare("getPlatformVersion") == 0) {
@@ -56,4 +56,4 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
   }
 }
 
-}  // namespace flutter_blue_plus_windows
+}  // namespace flutter_blue_plus_plugin

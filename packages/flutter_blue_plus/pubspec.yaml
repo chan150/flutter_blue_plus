@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+#  flutter_blue_plus_windows: ^1.26.1
   flutter_blue_plus_windows:
     path: ../flutter_blue_plus_windows
   flutter_blue_plus_android: ^3.0.0

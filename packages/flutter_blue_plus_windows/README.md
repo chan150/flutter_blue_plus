@@ -1,4 +1,4 @@
-# flutter_blue_plus_windows
+# flutter_blue_plus_plugin
 
 A new Flutter plugin project.
 
