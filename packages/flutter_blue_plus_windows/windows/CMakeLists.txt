@@ -25,7 +25,7 @@ list(APPEND PLUGIN_SOURCES
 # Define the plugin library target. Its name must not be changed (see comment
 # on PLUGIN_NAME above).
 add_library(${PLUGIN_NAME} SHARED
-  "include/flutter_blue_plus_windows/flutter_blue_plus_windows_plugin_c_api.h"
+  "include/flutter_blue_plus_windows/flutter_blue_plus_plugin.h"
   "flutter_blue_plus_windows_plugin_c_api.cpp"
   ${PLUGIN_SOURCES}
 )
