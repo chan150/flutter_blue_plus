@@ -20,7 +20,7 @@ void FlutterBluePlusWindowsPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows *registrar) {
   auto channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          registrar->messenger(), "flutter_blue_plus_windows",
+          registrar->messenger(), "flutter_blue_plus/methods",
           &flutter::StandardMethodCodec::GetInstance());
 
   auto plugin = std::make_unique<FlutterBluePlusWindowsPlugin>();
@@ -40,7 +40,7 @@ FlutterBluePlusWindowsPlugin::~FlutterBluePlusWindowsPlugin() {}
 void FlutterBluePlusWindowsPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-  if (method_call.method_name().compare("getPlatformVersion") == 0) {
+  if (method_call.method_name().compare("flutterRestart") == 0) {
     std::ostringstream version_stream;
     version_stream << "Windows ";
     if (IsWindows10OrGreater()) {
