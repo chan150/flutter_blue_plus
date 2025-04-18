@@ -30,6 +30,8 @@ dependency_overrides:
     path: ../../flutter_blue_plus_platform_interface
   flutter_blue_plus_web:
     path: ../../flutter_blue_plus_web
+  flutter_blue_plus_windows:
+    path: ../../flutter_blue_plus_windows
 
 flutter:
   uses-material-design: true
