@@ -51,15 +51,23 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
   const std::string& method = method_call.method_name();
 
   if (method == "setLogLevel") {
+    result->Success(flutter::EncodableValue(true));
+    return;
   }
 
   if (method == "setOptions") {
+    result->Success(flutter::EncodableValue(true));
+    return;
   }
 
   if (method == "flutterRestart") {
+    result->Success(flutter::EncodableValue(true));
+    return;
   }
 
   if (method == "connectedCount") {
+    result->Success(flutter::EncodableValue(true));
+    return;
   }
 
   if (method == "isSupported") {
@@ -69,12 +77,21 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
   }
 
   if (method == "getAdapterState") {
+    flutter::EncodableMap response = {
+        {flutter::EncodableValue("adapter_state"), flutter::EncodableValue(0)}
+    };
+    result->Success(flutter::EncodableValue(response));
+    return;
   }
 
   if (method == "turnOn") {
+    result->Success(flutter::EncodableValue(true));
+    return;
   }
 
   if (method == "turnOff") {
+    result->Success(flutter::EncodableValue(true));
+    return;
   }
 
   if (method == "startScan") {
