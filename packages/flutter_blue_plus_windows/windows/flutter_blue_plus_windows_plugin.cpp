@@ -78,7 +78,7 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
 
   if (method == "getAdapterState") {
     flutter::EncodableMap response = {
-        {flutter::EncodableValue("adapter_state"), flutter::EncodableValue(0)}
+        {"adapter_state", 4}
     };
     result->Success(flutter::EncodableValue(response));
     return;
