@@ -48,26 +48,27 @@ FlutterBluePlusWindowsPlugin::~FlutterBluePlusWindowsPlugin() {}
 void FlutterBluePlusWindowsPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-  const std::string& method = method_call.method_name();
+  const auto& method = method_call.method_name();
+//  const auto& arguments = method_call.arguments();
 
   if (method == "setLogLevel") {
-    result->Success(flutter::EncodableValue(true));
-    return;
+//    result->Success(flutter::EncodableValue(true));
+//    return;
   }
 
   if (method == "setOptions") {
-    result->Success(flutter::EncodableValue(true));
-    return;
+//    result->Success(flutter::EncodableValue(true));
+//    return;
   }
 
   if (method == "flutterRestart") {
-    result->Success(flutter::EncodableValue(true));
-    return;
+//    result->Success(flutter::EncodableValue(true));
+//    return;
   }
 
   if (method == "connectedCount") {
-    result->Success(flutter::EncodableValue(true));
-    return;
+//    result->Success(flutter::EncodableValue(true));
+//    return;
   }
 
   if (method == "isSupported") {
@@ -77,30 +78,25 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
   }
 
   if (method == "getAdapterState") {
-    flutter::EncodableMap response = {
-        {"adapter_state", 4}
-    };
-    result->Success(flutter::EncodableValue(response));
-    return;
-  }
-
-  if (method == "turnOn") {
-    result->Success(flutter::EncodableValue(true));
-    return;
-  }
-
-  if (method == "turnOff") {
-    result->Success(flutter::EncodableValue(true));
-    return;
+//    flutter::EncodableMap response = {
+//        {"adapter_state", 4}
+//    };
+//    result->Success(flutter::EncodableValue(response));
   }
 
   if (method == "startScan") {
+    
   }
 
   if (method == "stopScan") {
   }
 
   if (method == "getSystemDevices") {
+    flutter::EncodableMap response = {};
+    flutter::EncodableList devices(0);
+    response[flutter::EncodableValue("devices")] = devices;
+    result->Success(flutter::EncodableValue(response));
+    return;
   }
 
   if (method == "connect") {
