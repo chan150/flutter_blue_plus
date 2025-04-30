@@ -13,10 +13,6 @@
 #include <string>
 #include <vector>
 
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Devices.Bluetooth.h>
-#include <winrt/Windows.Devices.Enumeration.h>
-
 namespace flutter_blue_plus_windows {
 enum LogLevel {
   LNONE = 0,
@@ -49,43 +45,21 @@ FlutterBluePlusWindowsPlugin::FlutterBluePlusWindowsPlugin() {}
 
 FlutterBluePlusWindowsPlugin::~FlutterBluePlusWindowsPlugin() {}
 
-    ////////////////////////////////////////////////////////////
-    // ███    ███  ███████  ████████  ██   ██   ██████   ██████
-    // ████  ████  ██          ██     ██   ██  ██    ██  ██   ██
-    // ██ ████ ██  █████       ██     ███████  ██    ██  ██   ██
-    // ██  ██  ██  ██          ██     ██   ██  ██    ██  ██   ██
-    // ██      ██  ███████     ██     ██   ██   ██████   ██████
-    //
-    //  ██████   █████   ██       ██
-    // ██       ██   ██  ██       ██
-    // ██       ███████  ██       ██
-    // ██       ██   ██  ██       ██
-    //  ██████  ██   ██  ███████  ███████
-
 void FlutterBluePlusWindowsPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
   const auto& method = method_call.method_name();
-//  const auto& arguments = method_call.arguments();
 
   if (method == "setLogLevel") {
-//    result->Success(flutter::EncodableValue(true));
-//    return;
   }
 
   if (method == "setOptions") {
-//    result->Success(flutter::EncodableValue(true));
-//    return;
   }
 
   if (method == "flutterRestart") {
-//    result->Success(flutter::EncodableValue(true));
-//    return;
   }
 
   if (method == "connectedCount") {
-//    result->Success(flutter::EncodableValue(true));
-//    return;
   }
 
   if (method == "isSupported") {
@@ -95,53 +69,16 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
   }
 
   if (method == "getAdapterState") {
-//    flutter::EncodableMap response = {
-//        {"adapter_state", 4}
-//    };
-//    result->Success(flutter::EncodableValue(response));
   }
 
   if (method == "startScan") {
-    
+
   }
 
   if (method == "stopScan") {
   }
 
   if (method == "getSystemDevices") {
-    using namespace winrt::Windows::Devices::Enumeration;
-    using namespace winrt::Windows::Devices::Bluetooth;
-    using namespace winrt::Windows::Foundation;
-
-    auto asyncOp = DeviceInformation::FindAllAsync(BluetoothLEDevice::GetDeviceSelector());
-
-//    flutter::EncodableList deviceList(0);
-//    flutter::EncodableMap response = {
-//        {flutter::EncodableValue("devices"), deviceList}
-//    };
-//    result->Success(flutter::EncodableValue(response));
-//    return;
-
-    asyncOp.Completed([result = std::move(result)](auto const& op, auto const& status) mutable {
-        if (status == winrt::Windows::Foundation::AsyncStatus::Completed) {
-            auto devices = op.GetResults();
-            flutter::EncodableList deviceList(0);
-//            std::cout << &devices << std::endl;
-            // for (const auto& device : devices) {
-            //     flutter::EncodableMap devMap;
-            //     devMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(winrt::to_string(device.Id()));
-            //     devMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue(winrt::to_string(device.Name()));
-            //     deviceList.push_back(flutter::EncodableValue(devMap));
-            // }
-            flutter::EncodableMap response = {
-                {flutter::EncodableValue("devices"), deviceList}
-            };
-            result->Success(flutter::EncodableValue(response));
-        } else {
-            result->Error("getSystemDevices", "Failed to get BLE devices");
-        }
-    });
-    return;
   }
 
   if (method == "connect") {
@@ -156,4 +93,4 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
   result->NotImplemented();
 }
 
-}  // namespace flutter_blue_plus_windows
+}
