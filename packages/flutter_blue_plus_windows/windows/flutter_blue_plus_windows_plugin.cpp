@@ -12,6 +12,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <coroutine>
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
@@ -49,10 +50,11 @@ FlutterBluePlusWindowsPlugin::FlutterBluePlusWindowsPlugin() {}
 
 FlutterBluePlusWindowsPlugin::~FlutterBluePlusWindowsPlugin() {}
 
-//fire_and_forget FlutterBluePlusWindowsPlugin::GetSystemDevices() {
+//winrt::fire_and_forget FlutterBluePlusWindowsPlugin::GetSystemDevices() {
 //    auto selector = winrt::Windows::Devices::Bluetooth::BluetoothDevice::GetDeviceSelector();
-//    auto deviceInfoCollection = winrt::Windows::Devices::Enumeration::DeviceInformation::FindAllAsync(selector);
-//    result(deviceInfoCollection);
+//    auto deviceInfoCollection = co_await winrt::Windows::Devices::Enumeration::DeviceInformation::FindAllAsync(selector);
+////    result(deviceInfoCollection);
+//    co_return;
 //}
 
 void FlutterBluePlusWindowsPlugin::HandleMethodCall(
@@ -90,19 +92,19 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
 
   if (method == "getSystemDevices") {
     try {
+//      auto selector = winrt::Windows::Devices::Bluetooth::BluetoothDevice::GetDeviceSelector();
+//      auto deviceInfoCollection = co_await winrt::Windows::Devices::Enumeration::DeviceInformation::FindAllAsync(selector);
+//      FlutterBluePlusWindowsPlugin::GetSystemDevices();
+
       flutter::EncodableMap response = {};
       flutter::EncodableList deviceList;
 
-      flutter::EncodableMap deviceMap;
-      deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue("FF:FF:FF:FF:FF:FF");
-      deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue("NAME");
-      deviceList.push_back(flutter::EncodableValue(deviceMap));
-      
-//      for (const auto& deviceInfo : deviceInfoCollection) {
+//      for (uint32_t i = 0; i < deviceInfoCollection.Size(); i++) {
 //        try {
+//          auto deviceInfo = deviceInfoCollection.GetAt(i);
 //          flutter::EncodableMap deviceMap;
-//          deviceMap[flutter::EncodableValue("id")] = flutter::EncodableValue(winrt::to_string(deviceInfo.Id()));
-//          deviceMap[flutter::EncodableValue("name")] = flutter::EncodableValue(winrt::to_string(deviceInfo.Name()));
+//          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(winrt::to_string(deviceInfo.Id()));
+//          deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue(winrt::to_string(deviceInfo.Name()));
 //          deviceList.push_back(flutter::EncodableValue(deviceMap));
 //        } catch (const winrt::hresult_error& e) {
 //          OutputDebugStringW(L"Error processing device: ");
@@ -118,7 +120,6 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
     } catch (const std::exception& e) {
       result->Error("getSystemDevices", e.what());
     }
-    return;
   }
 
   if (method == "connect") {

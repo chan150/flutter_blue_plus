@@ -8,6 +8,11 @@ cmake_minimum_required(VERSION 3.14)
 set(PROJECT_NAME "flutter_blue_plus_windows")
 project(${PROJECT_NAME} LANGUAGES CXX)
 
+# Enable C++20 and coroutines
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
