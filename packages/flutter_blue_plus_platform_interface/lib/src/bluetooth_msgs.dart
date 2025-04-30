@@ -80,6 +80,7 @@ class BmScanSettings {
   final bool androidLegacy;
   final int androidScanMode;
   final bool androidUsesFineLocation;
+  final bool androidCheckLocationServices;
   final List<Guid> webOptionalServices;
 
   BmScanSettings({
@@ -94,6 +95,7 @@ class BmScanSettings {
     required this.androidLegacy,
     required this.androidScanMode,
     required this.androidUsesFineLocation,
+    this.androidCheckLocationServices = true,
     required this.webOptionalServices,
   });
 
@@ -110,7 +112,8 @@ class BmScanSettings {
     data['android_legacy'] = androidLegacy;
     data['android_scan_mode'] = androidScanMode;
     data['android_uses_fine_location'] = androidUsesFineLocation;
-    data['web_optional_services'] = webOptionalServices;
+    data['android_check_location_services'] = androidCheckLocationServices;
+    data['web_optional_services'] = webOptionalServices.map((s) => s.str).toList();;
     return data;
   }
 }
@@ -151,13 +154,18 @@ class BmScanAdvertisement {
     var rawServiceUuids = json['service_uuids'] ?? [];
 
     // Cast the data to the right type
-    Map<int, List<int>> manufacturerData = rawManufacturerData.map((k, v) => MapEntry(k as int, v as Uint8List));
-
+    Map<int, List<int>> manufacturerData = {};
+    rawManufacturerData.forEach((k, v) {
+      manufacturerData[k] = v;
+    });
     // Cast the data to the right type
-    Map<Guid, List<int>> serviceData = rawServiceData.map((k, v) => MapEntry(k as Guid, v as Uint8List));
-
+    Map<Guid, List<int>> serviceData = {};
+    rawServiceData.forEach((k, v) {
+      serviceData[Guid(k)] = v;
+    });
     // Cast the data to the right type
-    List<Guid> serviceUuids = rawServiceUuids.cast<String>().map((e) => Guid(e)).toList();
+    List<Guid> serviceUuids = [];
+    rawServiceUuids.forEach((e) => serviceUuids.add(Guid(e)));
 
     return BmScanAdvertisement(
       remoteId: DeviceIdentifier(json['remote_id']),
@@ -916,6 +924,20 @@ class BmTurnOnRequest {
   BmTurnOnRequest();
 }
 
+class BmTurnOnResponse {
+  bool userAccepted;
+
+  BmTurnOnResponse({
+    required this.userAccepted,
+  });
+
+  factory BmTurnOnResponse.fromMap(Map<dynamic, dynamic> json) {
+    return BmTurnOnResponse(
+      userAccepted: json['user_accepted'],
+    );
+  }
+}
+
 class BmSetLogLevelRequest {
   LogLevel logLevel;
   bool logColor;
@@ -974,17 +996,3 @@ class PhySupport {
 // random number defined by flutter blue plus.
 // Ideally it should not conflict with iOS or Android error codes.
 int bmUserCanceledErrorCode = 23789258;
-
-String _hexEncode(List<int> numbers) {
-  return numbers.map((n) => (n & 0xFF).toRadixString(16).padLeft(2, '0')).join();
-}
-
-List<int> _hexDecode(String hex) {
-  List<int> numbers = [];
-  for (int i = 0; i < hex.length; i += 2) {
-    String hexPart = hex.substring(i, i + 2);
-    int num = int.parse(hexPart, radix: 16);
-    numbers.add(num);
-  }
-  return numbers;
-}
