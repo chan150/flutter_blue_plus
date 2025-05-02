@@ -48,46 +48,44 @@ FlutterBluePlusWindowsPlugin::~FlutterBluePlusWindowsPlugin() {}
 fire_and_forget GetSystemDevicesAsync(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
     try {
       auto selector = BluetoothDevice::GetDeviceSelector();
-      DeviceInformationCollection devices = co_await DeviceInformation::FindAllAsync(selector);
+      DeviceInformationCollection deviceInfoCollection = co_await DeviceInformation::FindAllAsync(selector);
 
       flutter::EncodableMap response = {};
       flutter::EncodableList deviceList;
 
-//      for (winrt::Windows::Devices::Enumeration::DeviceInformation const& device_info : devices)
-//      {
-//          std::cout << "TEST" << std::endl;
-//      }
-
-//      for (auto&& deviceInfo : deviceInfoCollection) {
-//        try {
+      for (auto&& deviceInfo : deviceInfoCollection) {
+          std::cout<<"TEST"<<std::endl;
+        try {
           flutter::EncodableMap deviceMap = {};
-//
-//          // Get device properties
-//          auto properties = deviceInfo.Properties();
-//          bool isPaired = false;
-//          if (properties.HasKey(L"System.Devices.Aep.IsPaired")) {
-//            isPaired = winrt::unbox_value<bool>(properties.Lookup(L"System.Devices.Aep.IsPaired"));
-//          }
-//
-//          // Get device name
-//          std::string name = winrt::to_string(deviceInfo.Name());
-//          if (name.empty() && properties.HasKey(L"System.Devices.Aep.DeviceAddress")) {
-//            name = winrt::to_string(winrt::unbox_value<winrt::hstring>(properties.Lookup(L"System.Devices.Aep.DeviceAddress")));
-//          }
-//
-//          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(winrt::to_string(deviceInfo.Id()));
-//          deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue(name);
-          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue("FF:FF:FF:FF:FF:FF");
-          deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue("name");
 
-          deviceList.push_back(flutter::EncodableValue(deviceMap));
-//        } catch (const winrt::hresult_error& e) {
-//          OutputDebugStringW(L"Error processing device: ");
-//          OutputDebugStringW(e.message().c_str());
-//          OutputDebugStringW(L"\n");
-//        }
-//      }
+          // Get device properties
+          auto properties = deviceInfo.Properties();
+          bool isPaired = false;
+          if (properties.HasKey(L"System.Devices.Aep.IsPaired")) {
+            isPaired = winrt::unbox_value<bool>(properties.Lookup(L"System.Devices.Aep.IsPaired"));
+          }
+
+          // Get device name
+          std::string name = winrt::to_string(deviceInfo.Name());
+          if (name.empty() && properties.HasKey(L"System.Devices.Aep.DeviceAddress")) {
+            name = winrt::to_string(winrt::unbox_value<winrt::hstring>(properties.Lookup(L"System.Devices.Aep.DeviceAddress")));
+          }
+
+          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(winrt::to_string(deviceInfo.Id()));
+          deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue(name);
+//          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue("FF:FF:FF:FF:FF:FF");
+//          deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue("name");
 //
+//          deviceList.push_back(flutter::EncodableValue(deviceMap));
+        } catch (const winrt::hresult_error& e) {
+          OutputDebugStringW(L"Error processing device: ");
+          OutputDebugStringW(e.message().c_str());
+          OutputDebugStringW(L"\n");
+        } catch (const std::exception& e) {
+            std::cout << e.what() << std::endl;
+        }
+      }
+
       response[flutter::EncodableValue("devices")] = deviceList;
       result->Success(flutter::EncodableValue(response));
     } catch (const winrt::hresult_error& e) {
