@@ -55,29 +55,19 @@ fire_and_forget GetSystemDevicesAsync(std::unique_ptr<flutter::MethodResult<flut
 
       for (auto&& deviceInfo : deviceInfoCollection) {
         try {
-          std::cout<<to_string(deviceInfo.Id())<<std::endl;
           flutter::EncodableMap deviceMap = {};
-
-          // Get device properties
           auto properties = deviceInfo.Properties();
-          bool isPaired = false;
-          if (properties.HasKey(L"System.Devices.Aep.IsPaired")) {
-            isPaired = winrt::unbox_value<bool>(properties.Lookup(L"System.Devices.Aep.IsPaired"));
-          }
-
-          // Get device name
-          std::string name = winrt::to_string(deviceInfo.Name());
+          std::string name = to_string(deviceInfo.Name());
           if (name.empty() && properties.HasKey(L"System.Devices.Aep.DeviceAddress")) {
-            name = winrt::to_string(winrt::unbox_value<winrt::hstring>(properties.Lookup(L"System.Devices.Aep.DeviceAddress")));
+            name = to_string(unbox_value<hstring>(properties.Lookup(L"System.Devices.Aep.DeviceAddress")));
           }
 
-          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(winrt::to_string(deviceInfo.Id()));
+          std::string full_id = to_string(deviceInfo.Id());
+          std::string remote_id = full_id.substr(full_id.find_last_of('-') + 1);
+          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(remote_id);
           deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue(name);
-//          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue("FF:FF:FF:FF:FF:FF");
-//          deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue("name");
-//
-//          deviceList.push_back(flutter::EncodableValue(deviceMap));
-        } catch (const winrt::hresult_error& e) {
+          deviceList.push_back(flutter::EncodableValue(deviceMap));
+        } catch (const hresult_error& e) {
           OutputDebugStringW(L"Error processing device: ");
           OutputDebugStringW(e.message().c_str());
           OutputDebugStringW(L"\n");
@@ -88,8 +78,8 @@ fire_and_forget GetSystemDevicesAsync(std::unique_ptr<flutter::MethodResult<flut
 
       response[flutter::EncodableValue("devices")] = deviceList;
       result->Success(flutter::EncodableValue(response));
-    } catch (const winrt::hresult_error& e) {
-      result->Error("getSystemDevices", winrt::to_string(e.message()));
+    } catch (const hresult_error& e) {
+      result->Error("getSystemDevices", to_string(e.message()));
     } catch (const std::exception& e) {
       result->Error("getSystemDevices", e.what());
     }
