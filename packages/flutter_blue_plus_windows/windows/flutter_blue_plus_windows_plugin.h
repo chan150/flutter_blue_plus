@@ -19,8 +19,6 @@ using namespace winrt::Windows;
 using namespace winrt::Windows::Devices;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Foundation::Collections;
-//using namespace winrt::impl::consume_Windows_Foundation_Collections_IIterable
-//using namespace winrt::Windows::Foundation::Collections::IVectorView;
 using namespace winrt::Windows::Storage::Streams;
 using namespace winrt::Windows::Devices::Radios;
 using namespace winrt::Windows::Devices::Bluetooth;

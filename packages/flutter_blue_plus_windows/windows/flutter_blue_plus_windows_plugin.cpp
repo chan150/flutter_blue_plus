@@ -54,8 +54,8 @@ fire_and_forget GetSystemDevicesAsync(std::unique_ptr<flutter::MethodResult<flut
       flutter::EncodableList deviceList;
 
       for (auto&& deviceInfo : deviceInfoCollection) {
-          std::cout<<"TEST"<<std::endl;
         try {
+          std::cout<<to_string(deviceInfo.Id())<<std::endl;
           flutter::EncodableMap deviceMap = {};
 
           // Get device properties
