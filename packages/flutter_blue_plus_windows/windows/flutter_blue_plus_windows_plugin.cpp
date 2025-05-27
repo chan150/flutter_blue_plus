@@ -23,6 +23,8 @@ enum LogLevel {
   LVERBOSE = 5,
 };
 
+LogLevel current_log_level = LNONE;
+
 // static
 void FlutterBluePlusWindowsPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows *registrar) {
@@ -55,18 +57,22 @@ fire_and_forget GetSystemDevicesAsync(std::unique_ptr<flutter::MethodResult<flut
 
       for (auto&& deviceInfo : deviceInfoCollection) {
         try {
-          flutter::EncodableMap deviceMap = {};
           auto properties = deviceInfo.Properties();
+          flutter::EncodableMap deviceMap = {};
           std::string name = to_string(deviceInfo.Name());
-          if (name.empty() && properties.HasKey(L"System.Devices.Aep.DeviceAddress")) {
-            name = to_string(unbox_value<hstring>(properties.Lookup(L"System.Devices.Aep.DeviceAddress")));
-          }
-
-          std::string full_id = to_string(deviceInfo.Id());
-          std::string remote_id = full_id.substr(full_id.find_last_of('-') + 1);
-          deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(remote_id);
-          deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue(name);
-          deviceList.push_back(flutter::EncodableValue(deviceMap));
+          std::cout<<name<<std::endl;
+          std::cout<<properties.HasKey(L"System.Devices.Aep.IsConnected")<<std::endl;
+//          if (properties.HasKey(L"System.Devices.Aep.IsConnected") &&
+//              unbox_value<bool>(properties.Lookup(L"System.Devices.Aep.IsConnected"))) {
+            if (name.empty() && properties.HasKey(L"System.Devices.Aep.DeviceAddress")) {
+              name = to_string(unbox_value<hstring>(properties.Lookup(L"System.Devices.Aep.DeviceAddress")));
+            }
+            std::string full_id = to_string(deviceInfo.Id());
+            std::string remote_id = full_id.substr(full_id.find_last_of('-') + 1);
+            deviceMap[flutter::EncodableValue("remote_id")] = flutter::EncodableValue(remote_id);
+            deviceMap[flutter::EncodableValue("platform_name")] = flutter::EncodableValue(name);
+            deviceList.push_back(flutter::EncodableValue(deviceMap));
+//          }
         } catch (const hresult_error& e) {
           OutputDebugStringW(L"Error processing device: ");
           OutputDebugStringW(e.message().c_str());
@@ -92,6 +98,20 @@ void FlutterBluePlusWindowsPlugin::HandleMethodCall(
   const auto& method = method_call.method_name();
 
   if (method == "setLogLevel") {
+    // const auto& arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+    // auto log_level_it = arguments.find(flutter::EncodableValue("logLevel"));
+    // if (log_level_it != arguments.end() && log_level_it->second.IsInt()) {
+    //   int log_level = std::get<int>(log_level_it->second);
+    //   if (log_level >= LNONE && log_level <= LVERBOSE) {
+    //     current_log_level = static_cast<LogLevel>(log_level);
+    //     result->Success();
+    //   } else {
+    //     result->Error("InvalidLogLevel", "The provided log level is out of range.");
+    //   }
+    // } else {
+    //   result->Error("InvalidArguments", "Expected an integer log level.");
+    // }
+    return;
   }
 
   if (method == "setOptions") {
