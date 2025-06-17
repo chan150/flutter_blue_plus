@@ -16,12 +16,13 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   final _onDescriptorWrittenController = StreamController<BmDescriptorData>.broadcast();
   final _onDiscoveredServicesController = StreamController<BmDiscoverServicesResult>.broadcast();
   final _onReadRssiController = StreamController<BmReadRssiResult>.broadcast();
+  final _onTurnOnResponseController = StreamController<BmTurnOnResponse>.broadcast();
 
   @override
   Stream<BmBluetoothAdapterState> get onAdapterStateChanged {
     return _client.adaptersChanged.where(
       (adapters) {
-        return adapters.length > 0;
+        return adapters.isNotEmpty;
       },
     ).switchMap(
       (adapters) {
@@ -32,9 +33,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
         ).map(
           (properties) {
             return BmBluetoothAdapterState(
-              adapterState: adapters.first.powered
-                  ? BmAdapterStateEnum.on
-                  : BmAdapterStateEnum.off,
+              adapterState: adapters.first.powered ? BmAdapterStateEnum.on : BmAdapterStateEnum.off,
             );
           },
         );
@@ -57,9 +56,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                 (properties) {
                   return BmBondStateResponse(
                     remoteId: device.remoteId,
-                    bondState: device.paired
-                        ? BmBondStateEnum.bonded
-                        : BmBondStateEnum.none,
+                    bondState: device.paired ? BmBondStateEnum.bonded : BmBondStateEnum.none,
                     prevState: null,
                   );
                 },
@@ -135,9 +132,8 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                 (properties) {
                   return BmConnectionStateResponse(
                     remoteId: device.remoteId,
-                    connectionState: device.connected
-                        ? BmConnectionStateEnum.connected
-                        : BmConnectionStateEnum.disconnected,
+                    connectionState:
+                        device.connected ? BmConnectionStateEnum.connected : BmConnectionStateEnum.disconnected,
                     disconnectReasonCode: null,
                     disconnectReasonString: null,
                   );
@@ -267,6 +263,11 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   }
 
   @override
+  Stream<BmTurnOnResponse> get onTurnOnResponse {
+    return _onTurnOnResponseController.stream;
+  }
+
+  @override
   Future<bool> connect(
     BmConnectRequest request,
   ) async {
@@ -330,6 +331,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
         },
       );
 
+      resetInstanceIds(device.remoteId);
       _onDiscoveredServicesController.add(
         BmDiscoverServicesResult(
           remoteId: device.remoteId,
@@ -342,6 +344,10 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                 remoteId: device.remoteId,
                 characteristics: service.characteristics.map(
                   (characteristic) {
+                    int instanceId = _UniqueCharacteristicInstanceId.next();
+                    instanceIdToCharMap[instanceId] = characteristic;
+                    charToInstanceIdMap[characteristic] = instanceId;
+
                     return BmBluetoothCharacteristic(
                       remoteId: device.remoteId,
                       serviceUuid: Guid.fromBytes(
@@ -351,6 +357,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                         characteristic.uuid.value,
                       ),
                       primaryServiceUuid: null,
+                      instanceId: characteristic.instanceId,
                       descriptors: characteristic.descriptors.map(
                         (descriptor) {
                           return BmBluetoothDescriptor(
@@ -365,6 +372,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                               descriptor.uuid.value,
                             ),
                             primaryServiceUuid: null,
+                            instanceId: characteristic.instanceId,
                           );
                         },
                       ).toList(),
@@ -432,7 +440,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
     await _initFlutterBluePlus();
 
     return BmBluetoothAdapterName(
-      adapterName: _client.adapters.first.name,
+      adapterName: _client.adapters.firstOrNull?.name ?? '',
     );
   }
 
@@ -443,9 +451,11 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
     await _initFlutterBluePlus();
 
     return BmBluetoothAdapterState(
-      adapterState: _client.adapters.first.powered
-          ? BmAdapterStateEnum.on
-          : BmAdapterStateEnum.off,
+      adapterState: switch (_client.adapters.firstOrNull?.powered) {
+        true => BmAdapterStateEnum.on,
+        false => BmAdapterStateEnum.off,
+        _ => BmAdapterStateEnum.unknown,
+      },
     );
   }
 
@@ -514,7 +524,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   ) async {
     await _initFlutterBluePlus();
 
-    return _client.adapters.length > 0;
+    return _client.adapters.isNotEmpty;
   }
 
   @override
@@ -546,7 +556,8 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
             characteristic.uuid.value,
           );
 
-          return uuid == request.characteristicUuid;
+          return uuid == request.characteristicUuid &&
+              (characteristic.instanceId == null || characteristic.instanceId == request.instanceId);
         },
       );
 
@@ -566,11 +577,12 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: true,
           errorCode: 0,
           errorString: '',
+          instanceId: characteristic.instanceId,
         ),
       );
 
       return true;
-    }  catch (e) {
+    } catch (e) {
       _onCharacteristicReadController.add(
         BmCharacteristicData(
           remoteId: request.remoteId,
@@ -581,6 +593,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: false,
           errorCode: 0,
           errorString: e.toString(),
+          instanceId: request.instanceId,
         ),
       );
 
@@ -617,7 +630,8 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
             characteristic.uuid.value,
           );
 
-          return uuid == request.characteristicUuid;
+          return uuid == request.characteristicUuid &&
+              (characteristic.instanceId == null || characteristic.instanceId == request.instanceId);
         },
       );
 
@@ -650,6 +664,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: true,
           errorCode: 0,
           errorString: '',
+          instanceId: characteristic.instanceId,
         ),
       );
 
@@ -666,6 +681,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: false,
           errorCode: 0,
           errorString: e.toString(),
+          instanceId: request.instanceId,
         ),
       );
 
@@ -751,7 +767,8 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           characteristic.uuid.value,
         );
 
-        return uuid == request.characteristicUuid;
+        return uuid == request.characteristicUuid &&
+            (characteristic.instanceId == null || characteristic.instanceId == request.instanceId);
       },
     );
 
@@ -770,7 +787,13 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   ) async {
     await _initFlutterBluePlus();
 
-    await _client.adapters.first.setDiscoveryFilter(
+    final adapter = _client.adapters.firstOrNull;
+
+    if (adapter == null) {
+      return false;
+    }
+
+    await adapter.setDiscoveryFilter(
       uuids: request.withServices.map(
         (uuid) {
           return uuid.str128;
@@ -778,7 +801,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
       ).toList(),
     );
 
-    await _client.adapters.first.startDiscovery();
+    await adapter.startDiscovery();
 
     return true;
   }
@@ -789,7 +812,13 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   ) async {
     await _initFlutterBluePlus();
 
-    await _client.adapters.first.stopDiscovery();
+    final adapter = _client.adapters.firstOrNull;
+
+    if (adapter == null) {
+      return false;
+    }
+
+    await adapter.stopDiscovery();
 
     return true;
   }
@@ -800,7 +829,13 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   ) async {
     await _initFlutterBluePlus();
 
-    await _client.adapters.first.setPowered(false);
+    final adapter = _client.adapters.firstOrNull;
+
+    if (adapter == null || adapter.powered == false) {
+      return false;
+    }
+
+    await adapter.setPowered(false);
 
     return true;
   }
@@ -811,7 +846,19 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   ) async {
     await _initFlutterBluePlus();
 
-    await _client.adapters.first.setPowered(true);
+    final adapter = _client.adapters.firstOrNull;
+
+    if (adapter == null || adapter.powered == true) {
+      return false;
+    }
+
+    await adapter.setPowered(true);
+
+    _onTurnOnResponseController.add(
+      BmTurnOnResponse(
+        userAccepted: true,
+      ),
+    );
 
     return true;
   }
@@ -845,7 +892,8 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
             characteristic.uuid.value,
           );
 
-          return uuid == request.characteristicUuid;
+          return uuid == request.characteristicUuid &&
+              (characteristic.instanceId == null || characteristic.instanceId == request.instanceId);
         },
       );
 
@@ -870,6 +918,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: true,
           errorCode: 0,
           errorString: '',
+          instanceId: characteristic.instanceId,
         ),
       );
 
@@ -885,6 +934,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: false,
           errorCode: 0,
           errorString: e.toString(),
+          instanceId: request.instanceId,
         ),
       );
 
@@ -921,7 +971,8 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
             characteristic.uuid.value,
           );
 
-          return uuid == request.characteristicUuid;
+          return uuid == request.characteristicUuid &&
+              (characteristic.instanceId == null || characteristic.instanceId == request.instanceId);
         },
       );
 
@@ -954,6 +1005,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: true,
           errorCode: 0,
           errorString: '',
+          instanceId: characteristic.instanceId,
         ),
       );
 
@@ -970,6 +1022,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           success: false,
           errorCode: 0,
           errorString: e.toString(),
+          instanceId: request.instanceId,
         ),
       );
 
@@ -1067,3 +1120,41 @@ extension on BlueZDevice {
     return DeviceIdentifier(address);
   }
 }
+
+extension on BlueZGattCharacteristic {
+  /// gets the instance id of the characteristic, unique
+  /// for one discovery session.
+  int? get instanceId => charToInstanceIdMap[this];
+}
+
+class _UniqueCharacteristicInstanceId {
+  static int _counter = 0;
+
+  static int next() {
+    _counter++;
+    return _counter;
+  }
+}
+
+/// Resets the instance IDs for all characteristics for a specific device,
+/// so we do not keep incrementing the map for multiple
+/// calls to discoverServices.
+void resetInstanceIds(DeviceIdentifier discoveredDevice) {
+  List<int> instanceIdsToRemove = [];
+
+  for (final entry in instanceIdToDeviceMap.entries) {
+    if (entry.value == discoveredDevice.str) {
+      instanceIdsToRemove.add(entry.key);
+    }
+  }
+
+  for (final instanceId in instanceIdsToRemove) {
+    instanceIdToCharMap.remove(instanceId);
+    charToInstanceIdMap.removeWhere((key, value) => value == instanceId);
+    instanceIdToDeviceMap.remove(instanceId);
+  }
+}
+
+Map<int, BlueZGattCharacteristic> instanceIdToCharMap = {};
+Map<BlueZGattCharacteristic, int> charToInstanceIdMap = {};
+Map<int, String> instanceIdToDeviceMap = {};

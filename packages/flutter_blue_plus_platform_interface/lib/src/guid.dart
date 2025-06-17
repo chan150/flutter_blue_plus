@@ -14,7 +14,7 @@ class Guid {
   Guid(String input) : bytes = _toBytes(input);
 
   static Guid? parse(String? input) {
-    if (input == null || input.length == 0) {
+    if (input == null || input.isEmpty) {
       return null;
     } else {
       return Guid(input);
@@ -84,7 +84,7 @@ class Guid {
   String toString() => str;
 
   @override
-  operator ==(other) => other is Guid && hashCode == other.hashCode;
+  operator ==(other) => other is Guid && str128 == other.str128;
 
   @override
   int get hashCode => str128.hashCode;

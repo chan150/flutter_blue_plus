@@ -1,21 +1,38 @@
+## 1.35.5
+
+* **[Feature]** Android: added `androidCheckLocationServices` to `startScan` (#1199)
+
+## 1.35.4
+* **[Feature]** Android: check if location services are enabled before doing scan (#1167)
+* **[Improve]** better `Guid` equals operator (#1169)
+* **[Fix]** Android: `webOptionalServices` broke scanning on android (regression 1.35.4)
+* **[Fix]** Android: turnOn was not checking response (#1166) (regression 1.35.0)
+* **[Fix]** Android: multiple MSD in advertisement is wrong on Android
+* **[Fix]** Android: use Bluetooth request code less than 2^16 to prevent permissions error
+* **[Fix]** Linux: exception when adapters is empty (#1162)
+* **[Fix]** Web:`getAdapterState` and `discoverServices` fixes 
+* **[Fix]** Web: don't wait for CCCD write for `setNotifyValue` (#1153)
+* **[Refactor]** Performance: use bytes instead of hex for platform communication (#1130)
+
 ## 1.35.3
-* **[Feature]** support for web optional services (#1124)
-* **[Feature]** option to provide pairing PIN to `createBond` (#1119)
+* **[Feature]** Web: support for web optional services (#1124)
+* **[Feature]** Android: option to provide pairing PIN to `createBond` (#1119)
 
 ## 1.35.2
-* **[Refactor]** add log color
-* **[Refactor]** resolve the Dart analyzer issues
+* **[Fix]** add back log color (regression 1.35.0)
+* **[Fix]** resolve the Dart analyzer issues (regression 1.35.0)
 
 ## 1.35.1
-* **[Fix]** Bluetooth characteristic set notify value
-* **[Fix]** Bluetooth device create bond
-* **[Fix]** Bluetooth device remove bond
-* **[Fix]** Bluetooth device connect
-* **[Fix]** Bluetooth device disconnect
-* **[Fix]** Bluetooth adapter turn on
-* **[Fix]** Bluetooth adapter turn off
+* **[Fix]** Bluetooth characteristic set notify value (regression 1.35.0)
+* **[Fix]** Bluetooth device create bond (regression 1.35.0)
+* **[Fix]** Bluetooth device remove bond (regression 1.35.0)
+* **[Fix]** Bluetooth device connect (regression 1.35.0)
+* **[Fix]** Bluetooth device disconnect (regression 1.35.0)
+* **[Fix]** Bluetooth adapter turn on (regression 1.35.0)
+* **[Fix]** Bluetooth adapter turn off (regression 1.35.0)
 
 ## 1.35.0
+This release adds support for Web, Linux, and the Platform Interface.
 * **[Feature]** add platform interface
 
 ## 1.34.5

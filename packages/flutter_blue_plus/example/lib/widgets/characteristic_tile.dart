@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import '../utils/data_entry.dart';
 import "../utils/snackbar.dart";
 
 import "descriptor_tile.dart";
@@ -12,7 +12,7 @@ class CharacteristicTile extends StatefulWidget {
   final BluetoothCharacteristic characteristic;
   final List<DescriptorTile> descriptorTiles;
 
-  const CharacteristicTile({Key? key, required this.characteristic, required this.descriptorTiles}) : super(key: key);
+  const CharacteristicTile({super.key, required this.characteristic, required this.descriptorTiles});
 
   @override
   State<CharacteristicTile> createState() => _CharacteristicTileState();
@@ -28,9 +28,7 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
     super.initState();
     _lastValueSubscription = widget.characteristic.lastValueStream.listen((value) {
       _value = value;
-      if (mounted) {
-        setState(() {});
-      }
+      _update();
     });
   }
 
@@ -42,31 +40,31 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
 
   BluetoothCharacteristic get c => widget.characteristic;
 
-  List<int> _getRandomBytes() {
-    final math = Random();
-    return [math.nextInt(255), math.nextInt(255), math.nextInt(255), math.nextInt(255)];
-  }
-
   Future onReadPressed() async {
     try {
       await c.read();
       Snackbar.show(ABC.c, "Read: Success", success: true);
-    } catch (e) {
+    } catch (e, backtrace) {
       Snackbar.show(ABC.c, prettyException("Read Error:", e), success: false);
       print(e);
+      print("backtrace: $backtrace");
     }
   }
 
   Future onWritePressed() async {
     try {
-      await c.write(_getRandomBytes(), withoutResponse: c.properties.writeWithoutResponse);
-      Snackbar.show(ABC.c, "Write: Success", success: true);
-      if (c.properties.read) {
-        await c.read();
+      List<int>? value = await DataEntry.enterData(context);
+      if (value != null) {
+        await c.write(value, withoutResponse: c.properties.writeWithoutResponse);
+        Snackbar.show(ABC.c, "Write: Success", success: true);
+        if (c.properties.read) {
+          await c.read();
+        }
       }
-    } catch (e) {
+    } catch (e, backtrace) {
       Snackbar.show(ABC.c, prettyException("Write Error:", e), success: false);
       print(e);
+      print("backtrace: $backtrace");
     }
   }
 
@@ -78,12 +76,11 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
       if (c.properties.read) {
         await c.read();
       }
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
+      _update();
+    } catch (e, backtrace) {
       Snackbar.show(ABC.c, prettyException("Subscribe Error:", e), success: false);
       print(e);
+      print("backtrace: $backtrace");
     }
   }
 
@@ -102,9 +99,7 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
         child: Text("Read"),
         onPressed: () async {
           await onReadPressed();
-          if (mounted) {
-            setState(() {});
-          }
+          _update();
         });
   }
 
@@ -114,9 +109,7 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
         child: Text(withoutResp ? "WriteNoResp" : "Write"),
         onPressed: () async {
           await onWritePressed();
-          if (mounted) {
-            setState(() {});
-          }
+          _update();
         });
   }
 
@@ -126,9 +119,7 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
         child: Text(isNotifying ? "Unsubscribe" : "Subscribe"),
         onPressed: () async {
           await onSubscribePressed();
-          if (mounted) {
-            setState(() {});
-          }
+          _update();
         });
   }
 
@@ -155,7 +146,7 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Characteristic'),
+            Text('Characteristic', style: TextStyle(color: Theme.of(context).primaryColor)),
             buildUuid(context),
             buildValue(context),
           ],
@@ -165,5 +156,11 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
       ),
       children: widget.descriptorTiles,
     );
+  }
+
+  void _update() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 }

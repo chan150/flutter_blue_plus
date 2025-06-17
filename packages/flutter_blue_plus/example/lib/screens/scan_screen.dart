@@ -10,7 +10,7 @@ import '../widgets/scan_result_tile.dart';
 import '../utils/extra.dart';
 
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({Key? key}) : super(key: key);
+  const ScanScreen({super.key});
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -28,18 +28,16 @@ class _ScanScreenState extends State<ScanScreen> {
     super.initState();
 
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      _scanResults = results;
       if (mounted) {
-        setState(() {});
+        setState(() => _scanResults = results);
       }
     }, onError: (e) {
       Snackbar.show(ABC.b, prettyException("Scan Error:", e), success: false);
     });
 
     _isScanningSubscription = FlutterBluePlus.isScanning.listen((state) {
-      _isScanning = state;
       if (mounted) {
-        setState(() {});
+        setState(() => _isScanning = state);
       }
     });
   }
@@ -56,22 +54,31 @@ class _ScanScreenState extends State<ScanScreen> {
       // `withServices` is required on iOS for privacy purposes, ignored on android.
       var withServices = [Guid("180f")]; // Battery Level Service
       _systemDevices = await FlutterBluePlus.systemDevices(withServices);
-    } catch (e) {
+    } catch (e, backtrace) {
       Snackbar.show(ABC.b, prettyException("System Devices Error:", e), success: false);
       print(e);
+      print("backtrace: $backtrace");
     }
     try {
       await FlutterBluePlus.startScan(
         timeout: const Duration(seconds: 15),
+        withServices: [
+          // Guid("180f"), // battery
+          // Guid("180a"), // device info
+          // Guid("1800"), // generic access
+          // Guid("6e400001-b5a3-f393-e0a9-e50e24dcca9e"), // Nordic UART
+        ],
         webOptionalServices: [
           Guid("180f"), // battery
+          Guid("180a"), // device info
           Guid("1800"), // generic access
           Guid("6e400001-b5a3-f393-e0a9-e50e24dcca9e"), // Nordic UART
         ],
       );
-    } catch (e) {
+    } catch (e, backtrace) {
       Snackbar.show(ABC.b, prettyException("Start Scan Error:", e), success: false);
       print(e);
+      print("backtrace: $backtrace");
     }
     if (mounted) {
       setState(() {});
@@ -81,9 +88,10 @@ class _ScanScreenState extends State<ScanScreen> {
   Future onStopPressed() async {
     try {
       FlutterBluePlus.stopScan();
-    } catch (e) {
+    } catch (e, backtrace) {
       Snackbar.show(ABC.b, prettyException("Stop Scan Error:", e), success: false);
       print(e);
+      print("backtrace: $backtrace");
     }
   }
 
@@ -106,19 +114,35 @@ class _ScanScreenState extends State<ScanScreen> {
     return Future.delayed(Duration(milliseconds: 500));
   }
 
-  Widget buildScanButton(BuildContext context) {
-    if (FlutterBluePlus.isScanningNow) {
-      return FloatingActionButton(
-        child: const Icon(Icons.stop),
-        onPressed: onStopPressed,
-        backgroundColor: Colors.red,
-      );
-    } else {
-      return FloatingActionButton(child: const Text("SCAN"), onPressed: onScanPressed);
-    }
+  Widget buildScanButton() {
+    return Row(children: [
+      if (FlutterBluePlus.isScanningNow)
+        buildSpinner()
+      else
+        ElevatedButton(
+            onPressed: onScanPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: Text("SCAN"))
+    ]);
   }
 
-  List<Widget> _buildSystemDeviceTiles(BuildContext context) {
+  Widget buildSpinner() {
+    return Padding(
+      padding: const EdgeInsets.all(14.0),
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: CircularProgressIndicator(
+          backgroundColor: Colors.black12,
+          color: Colors.black26,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildSystemDeviceTiles() {
     return _systemDevices
         .map(
           (d) => SystemDeviceTile(
@@ -135,15 +159,8 @@ class _ScanScreenState extends State<ScanScreen> {
         .toList();
   }
 
-  List<Widget> _buildScanResultTiles(BuildContext context) {
-    return _scanResults
-        .map(
-          (r) => ScanResultTile(
-            result: r,
-            onTap: () => onConnectPressed(r.device),
-          ),
-        )
-        .toList();
+  Iterable<Widget> _buildScanResultTiles() {
+    return _scanResults.map((r) => ScanResultTile(result: r, onTap: () => onConnectPressed(r.device)));
   }
 
   @override
@@ -153,17 +170,18 @@ class _ScanScreenState extends State<ScanScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Find Devices'),
+          actions: [buildScanButton(), const SizedBox(width: 15)],
         ),
         body: RefreshIndicator(
           onRefresh: onRefresh,
           child: ListView(
             children: <Widget>[
-              ..._buildSystemDeviceTiles(context),
-              ..._buildScanResultTiles(context),
+              ..._buildSystemDeviceTiles(),
+              ..._buildScanResultTiles(),
             ],
           ),
         ),
-        floatingActionButton: buildScanButton(context),
+        // floatingActionButton: buildScanButton(context),
       ),
     );
   }
