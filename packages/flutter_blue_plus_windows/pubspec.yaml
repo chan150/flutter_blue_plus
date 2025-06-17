@@ -1,0 +1,25 @@
+name: flutter_blue_plus_windows
+description: Windows implementation of the flutter_blue_plus plugin.
+version: 3.0.0
+homepage: https://github.com/chipweinberger/flutter_blue_plus
+
+environment:
+  sdk: ^3.0.0
+  flutter: '>=3.7.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_blue_plus_platform_interface: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    implements: flutter_blue_plus
+    platforms:
+      windows:
+        pluginClass: FlutterBluePlusPlugin
+        dartPluginClass: FlutterBluePlusWindows
