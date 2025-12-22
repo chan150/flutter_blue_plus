@@ -19,8 +19,8 @@ FlutterBluePlus is sponsored by [Jamcorder](https://www.jamcorder.com/).
 
 FlutterBluePlus is licensed under the **[FlutterBluePlus License](./LICENSE)**.
 
-* **Free use**: For individuals, organizations with fewer than 50 employees, nonprofits, and educational institutions.  
-* **Commercial use**: For-profit organizations with **50 or more employees** must purchase a [Commercial License](https://jamcorder.myshopify.com/products/flutterblueplus-commercial-license). This license grants *lifetime use*, covers all FlutterBluePlus packages, and includes 365 days of updates.
+* **Free use**: For individuals, organizations with fewer than 15 employees, nonprofits, and educational institutions.  
+* **Commercial use**: For-profit organizations with **15 or more employees** must purchase a [Commercial License](https://jamcorder.myshopify.com/products/flutterblueplus-commercial-license). This license grants *lifetime use*, covers all FlutterBluePlus packages, and includes 365 days of updates.
 
 ---
 
@@ -73,7 +73,7 @@ This makes FlutterBluePlus very stable, and easy to maintain.
 
 ## Windows Support
 
-Use [flutter_blue_plus_windows](https://pub.dev/packages/flutter_blue_plus_windows) if you need Windows support.
+Use [flutter_blue_plus_winrt](https://pub.dev/packages/flutter_blue_plus_winrt) if you need Windows support.
 
 It is maintained by [@chan150](https://github.com/chan150).
 
