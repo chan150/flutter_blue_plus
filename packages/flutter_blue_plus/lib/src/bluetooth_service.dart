@@ -1,4 +1,4 @@
-// Copyright 2017-2023, Charles Weinberger & Paul DeMarco.
+// Copyright 2017-2023, Charles Weinberger
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
@@ -10,43 +10,20 @@ class BluetoothService {
   final Guid serviceUuid;
   final List<BluetoothCharacteristic> characteristics;
 
-  /// convenience accessor
+  /// for convenience
   Guid get uuid => serviceUuid;
-
-  /// for convenience
   bool get isPrimary => primaryServiceUuid == null;
-
-  /// for convenience
   bool get isSecondary => primaryServiceUuid != null;
 
   /// (for primary services)
   ///  get it's secondary services (i.e. includedServices)
-  List<BluetoothService> get includedServices {
-    List<BluetoothService> out = [];
-    if (FlutterBluePlus._knownServices[remoteId] != null) {
-      for (var s in FlutterBluePlus._knownServices[remoteId]!.services) {
-        if (s.primaryServiceUuid == serviceUuid) {
-          out.add(BluetoothService.fromProto(s));
-        }
-      }
-    }
-    return out;
-  }
+  List<BluetoothService> get includedServices =>
+      _findIncludedServices(FlutterBluePlus._knownServices[remoteId], serviceUuid);
 
   /// (for secondary services)
   ///  get the primary service it is associated with
-  BluetoothService? get primaryService {
-    if (primaryServiceUuid != null) {
-      if (FlutterBluePlus._knownServices[remoteId] != null) {
-        for (var s in FlutterBluePlus._knownServices[remoteId]!.services) {
-          if (s.serviceUuid == primaryServiceUuid) {
-            return BluetoothService.fromProto(s);
-          }
-        }
-      }
-    }
-    return null;
-  }
+  BluetoothService? get primaryService =>
+      _findPrimaryService(FlutterBluePlus._knownServices[remoteId], primaryServiceUuid);
 
   /// for internal use
   BluetoothService.fromProto(BmBluetoothService p)
@@ -54,6 +31,19 @@ class BluetoothService {
         primaryServiceUuid = p.primaryServiceUuid,
         serviceUuid = p.serviceUuid,
         characteristics = p.characteristics.map((c) => BluetoothCharacteristic.fromProto(c)).toList();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BluetoothService &&
+            remoteId == other.remoteId &&
+            primaryServiceUuid == other.primaryServiceUuid &&
+            serviceUuid == other.serviceUuid &&
+            listEquals(characteristics, other.characteristics);
+  }
+
+  @override
+  int get hashCode => Object.hash(remoteId, primaryServiceUuid, serviceUuid, Object.hashAll(characteristics));
 
   @override
   String toString() {

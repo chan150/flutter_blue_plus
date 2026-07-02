@@ -1,4 +1,4 @@
-// Copyright 2017-2023, Charles Weinberger & Paul DeMarco.
+// Copyright 2017-2023, Charles Weinberger
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
@@ -20,6 +20,22 @@ class BluetoothCharacteristic {
   ///  - Web: index within `BlueZGattService` -> characteristics
   final int instanceId;
 
+  /// for convenience
+  Guid get uuid => characteristicUuid;
+  BluetoothDevice get device => BluetoothDevice(remoteId: remoteId);
+
+  /// get properties from known services
+  CharacteristicProperties get properties {
+    final c = _findCharacteristic(FlutterBluePlus._knownServices[remoteId], this);
+    return c != null ? CharacteristicProperties.fromProto(c.properties) : CharacteristicProperties();
+  }
+
+  /// get descriptors from known services
+  List<BluetoothDescriptor> get descriptors {
+    final c = _findCharacteristic(FlutterBluePlus._knownServices[remoteId], this);
+    return c != null ? c.descriptors.map((d) => BluetoothDescriptor.fromProto(d)).toList() : [];
+  }
+
   BluetoothCharacteristic({
     required this.remoteId,
     this.primaryServiceUuid,
@@ -35,21 +51,19 @@ class BluetoothCharacteristic {
         characteristicUuid = p.characteristicUuid,
         instanceId = p.instanceId;
 
-  /// convenience accessor
-  Guid get uuid => characteristicUuid;
-
-  /// convenience accessor
-  BluetoothDevice get device => BluetoothDevice(remoteId: remoteId);
-
-  /// Get Properties from known services
-  CharacteristicProperties get properties {
-    return _bmchr != null ? CharacteristicProperties.fromProto(_bmchr!.properties) : CharacteristicProperties();
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BluetoothCharacteristic &&
+            remoteId == other.remoteId &&
+            primaryServiceUuid == other.primaryServiceUuid &&
+            serviceUuid == other.serviceUuid &&
+            characteristicUuid == other.characteristicUuid &&
+            instanceId == other.instanceId;
   }
 
-  /// Get Descriptors from known services
-  List<BluetoothDescriptor> get descriptors {
-    return _bmchr != null ? _bmchr!.descriptors.map((d) => BluetoothDescriptor.fromProto(d)).toList() : [];
-  }
+  @override
+  int get hashCode => Object.hash(remoteId, primaryServiceUuid, serviceUuid, characteristicUuid, instanceId);
 
   /// this variable is updated:
   ///   - anytime `read()` is called
@@ -113,8 +127,8 @@ class BluetoothCharacteristic {
           ErrorPlatform.fbp, "readCharacteristic", FbpErrorCode.deviceIsDisconnected.index, "device is not connected");
     }
 
-    // Only allow a single ble operation to be underway at a time
-    _Mutex mtx = _MutexFactory.getMutexForKey("global");
+    // Only allow a single BLE operation to be underway per device.
+    _Mutex mtx = _MutexFactory.getMutexForKey(FlutterBluePlus._bleOperationMutexKey(remoteId));
     await mtx.take();
 
     // return value
@@ -185,8 +199,8 @@ class BluetoothCharacteristic {
           ErrorPlatform.fbp, "writeCharacteristic", FbpErrorCode.deviceIsDisconnected.index, "device is not connected");
     }
 
-    // Only allow a single ble operation to be underway at a time
-    _Mutex mtx = _MutexFactory.getMutexForKey("global");
+    // Only allow a single BLE operation to be underway per device.
+    _Mutex mtx = _MutexFactory.getMutexForKey(FlutterBluePlus._bleOperationMutexKey(remoteId));
     await mtx.take();
 
     try {
@@ -251,8 +265,8 @@ class BluetoothCharacteristic {
       assert(forceIndications == false, "Only Android supports forcing indications");
     }
 
-    // Only allow a single ble operation to be underway at a time
-    _Mutex mtx = _MutexFactory.getMutexForKey("global");
+    // Only allow a single BLE operation to be underway per device.
+    _Mutex mtx = _MutexFactory.getMutexForKey(FlutterBluePlus._bleOperationMutexKey(remoteId));
     await mtx.take();
 
     try {
@@ -300,34 +314,6 @@ class BluetoothCharacteristic {
     }
 
     return true;
-  }
-
-  // get known service
-  BmBluetoothService? get _bmsvc {
-    if (FlutterBluePlus._knownServices[remoteId] != null) {
-      for (var s in FlutterBluePlus._knownServices[remoteId]!.services) {
-        if (s.primaryServiceUuid == primaryServiceUuid) {
-          if (s.serviceUuid == serviceUuid) {
-            return s;
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  /// get known characteristic
-  BmBluetoothCharacteristic? get _bmchr {
-    if (_bmsvc != null) {
-      for (var c in _bmsvc!.characteristics) {
-        if (c.characteristicUuid == uuid) {
-          if (c.instanceId == instanceId) {
-            return c;
-          }
-        }
-      }
-    }
-    return null;
   }
 
   @override

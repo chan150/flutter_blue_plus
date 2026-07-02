@@ -1,4 +1,4 @@
-// Copyright 2017-2023, Charles Weinberger & Paul DeMarco.
+// Copyright 2017-2023, Charles Weinberger
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
@@ -9,8 +9,12 @@ class BluetoothDescriptor {
   final Guid? primaryServiceUuid;
   final Guid serviceUuid;
   final Guid characteristicUuid;
-  final int instanceId; 
+  final int instanceId;
   final Guid descriptorUuid;
+
+  /// for convenience
+  Guid get uuid => descriptorUuid;
+  BluetoothDevice get device => BluetoothDevice(remoteId: remoteId);
 
   BluetoothDescriptor({
     required this.remoteId,
@@ -29,11 +33,27 @@ class BluetoothDescriptor {
         instanceId = p.instanceId,
         descriptorUuid = p.descriptorUuid;
 
-  /// convenience accessor
-  Guid get uuid => descriptorUuid;
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BluetoothDescriptor &&
+            remoteId == other.remoteId &&
+            primaryServiceUuid == other.primaryServiceUuid &&
+            serviceUuid == other.serviceUuid &&
+            characteristicUuid == other.characteristicUuid &&
+            instanceId == other.instanceId &&
+            descriptorUuid == other.descriptorUuid;
+  }
 
-  /// convenience accessor
-  BluetoothDevice get device => BluetoothDevice(remoteId: remoteId);
+  @override
+  int get hashCode => Object.hash(
+        remoteId,
+        primaryServiceUuid,
+        serviceUuid,
+        characteristicUuid,
+        instanceId,
+        descriptorUuid,
+      );
 
   /// this variable is updated:
   ///   - anytime `read()` is called
@@ -80,8 +100,8 @@ class BluetoothDescriptor {
           ErrorPlatform.fbp, "readDescriptor", FbpErrorCode.deviceIsDisconnected.index, "device is not connected");
     }
 
-    // Only allow a single ble operation to be underway at a time
-    _Mutex mtx = _MutexFactory.getMutexForKey("global");
+    // Only allow a single BLE operation to be underway per device.
+    _Mutex mtx = _MutexFactory.getMutexForKey(FlutterBluePlus._bleOperationMutexKey(remoteId));
     await mtx.take();
 
     // return value
@@ -138,8 +158,8 @@ class BluetoothDescriptor {
           ErrorPlatform.fbp, "writeDescriptor", FbpErrorCode.deviceIsDisconnected.index, "device is not connected");
     }
 
-    // Only allow a single ble operation to be underway at a time
-    _Mutex mtx = _MutexFactory.getMutexForKey("global");
+    // Only allow a single BLE operation to be underway per device.
+    _Mutex mtx = _MutexFactory.getMutexForKey(FlutterBluePlus._bleOperationMutexKey(remoteId));
     await mtx.take();
 
     try {

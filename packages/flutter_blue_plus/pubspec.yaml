@@ -1,26 +1,34 @@
 name: flutter_blue_plus
 description: Flutter plugin for connecting and communicating with Bluetooth Low Energy devices.
-version: 2.1.0
+version: 2.3.10
 homepage: https://github.com/chipweinberger/flutter_blue_plus
 
 environment:
   sdk: ^3.0.0
   flutter: '>=3.7.0'
 
+  # Internal release order for publishing to pub.dev:
+  # Commands:
+  #   0. cd /packages/flutter_blue_plus (if not already there)
+  #   1. cd ../flutter_blue_plus_platform_interface && flutter pub publish
+  #   2. cd ../flutter_blue_plus_android && flutter pub publish
+  #   3. cd ../flutter_blue_plus_darwin && flutter pub publish
+  #   4. cd ../flutter_blue_plus_linux && flutter pub publish
+  #   5. cd ../flutter_blue_plus_web && flutter pub publish
+  #   6. cd ../flutter_blue_plus && flutter pub publish
+
 dependencies:
   flutter:
     sdk: flutter
-  # use specific versions. 
-  #  - users otherwise forget to update all
-  #  - simpler bug reporting
-  #  - unified changelog
-  #  - users can still manually override
-  flutter_blue_plus_platform_interface: 8.1.0
-  flutter_blue_plus_android: 8.1.0
-  flutter_blue_plus_darwin: 8.1.0
-  flutter_blue_plus_linux: 8.1.0
-  flutter_blue_plus_web: 8.1.0
-  flutter_blue_plus_winrt: any
+  # use a constrained range instead of an exact version:
+  #  - avoids pub.dev warnings about pinned dependencies
+  #  - still forces all platform packages to a specific version
+  flutter_blue_plus_platform_interface: '>=9.0.3 <9.0.4'
+  flutter_blue_plus_android: '>=9.0.3 <9.0.4'
+  flutter_blue_plus_darwin: '>=9.0.3 <9.0.4'
+  flutter_blue_plus_linux: '>=9.0.3 <9.0.4'
+  flutter_blue_plus_web: '>=9.0.3 <9.0.4'
+  flutter_blue_plus_winrt: '>=0.0.20'
 
 dev_dependencies:
   flutter_lints: ^5.0.0

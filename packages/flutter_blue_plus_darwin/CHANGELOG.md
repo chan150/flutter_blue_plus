@@ -1,3 +1,31 @@
+## 9.0.3
+* **[LICENSE]** add `Corporate` tier for 250+ employees
+
+## 9.0.2
+* **[LICENSE]** clarify build-time license ping in the FlutterBluePlus License
+
+## 9.0.1
+* **[Release]** version bump to publish the updated `flutter_blue_plus_platform_interface: ^9.0.0` dependency
+
+## 9.0.0
+* **[Feature]** allow discovering multiple devices at the same time
+* **[Feature]** support for services with the same UUID
+* **[Improved]** allow `setOptions` arguments to be updated individually without resetting unspecified values
+* **[Fix]** discovery would timeout if no services were present
+* **[Fix]** included services discovery was broken
+
+## 8.2.2
+* **[Release]** version bump for the flutter_blue_plus 2.2.2 release
+
+## 8.2.1
+* **[LICENSE]** clarifications to the development exemption
+
+## 8.2.0
+* **[LICENSE]** new tiers based on company size & development exemption
+
+## 8.1.1
+* **[Fix]** nil-guard rssi in didReadRSSI:error: to prevent crash (#1318)
+
 ## 8.1.0
 * **[LICENSE]** commercial license is now required for 15 or more employees
 

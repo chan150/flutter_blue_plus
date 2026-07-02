@@ -1,3 +1,63 @@
+## 2.3.10
+* **[Improve]** Log the FlutterBluePlus Dart package version during first-time initialization.
+
+## 2.3.9
+* **[Android]** rename `com.lib.flutter_blue_plus` to `com.jmx.flutter_blue_plus`
+* **[LICENSE]** add `Corporate` tier for 250+ employees
+
+## 2.3.8
+* **[LICENSE]** clarify build-time license ping in the FlutterBluePlus License
+
+## 2.3.7
+* **[Fix]** pub.dev dependency resolution error (regression 2.3.6)
+
+## 2.3.6
+* **[Fix]** Darwin: crash when calling `setOptions` with a single argument (regression 2.3.0)
+
+## 2.3.5
+* **[LICENSE]** add license ping during build: package name & app name
+
+## 2.3.4
+* **[Improve]** Rename: `License.free` to `Licenese.nonprofit` for clarity
+
+## 2.3.3
+* **[Improve]** add back `winrt` dependency now that it is updated
+
+## 2.3.2
+* **[Improve]** docs & readme
+
+## 2.3.1
+* **[Improve]** tempoarily remove `winrt` as an explicit dependency. Windows users should use this:
+
+```yaml
+dependencies:
+  flutter_blue_plus: ^2.3.1
+  flutter_blue_plus_winrt: ^0.19
+```
+
+## 2.3.0
+* **[Feature]** Perf: allow writing to multiple devices at the same time! See: `FlutterBluePlus.setOperationQueueMode`
+* **[Feature]** Support for services with the same UUID
+* **[Improve]** Darwin: allow `setOptions` arguments to be updated individually
+* **[Improve]** Linux: remove `rxdart` dependency
+* **[Fix]** Darwin: discovery would timeout if no services were present
+* **[Fix]** Darwin: included services discovery was broken
+
+## 2.2.3
+* **[Fix]** Web: `setNotifyValue` no longer times out while notifications are already being received
+
+## 2.2.2
+* **[Fix]** Web: allow `autoConnect` when adapter state is unknown
+
+## 2.2.1
+* **[LICENSE]** clarifications to the development exemption
+
+## 2.2.0
+* **[LICENSE]** new tiers based on company size & development exemption
+
+## 2.1.1
+* **[Fix]** Darwin: nil-guard rssi to prevent crash (#1318)
+
 ## 2.1.0
 * **[LICENSE]** commercial license is now required for 15 or more employees
 * **[Feature]** endorse `flutter_blue_plus_winrt` package
@@ -958,7 +1018,7 @@ This release improves error handling and reliability.
 This release marks the end of major work to improve reliability and
 simplicity of the FlutterBluePlus codebase. Please submit bug reports.
 
-* **[Breaking Change/Fix]** Android: When `read` is called `onValueChangedStream` is pushed to as well. This change was made to make both platforms behave the same way. It is an unavoidable limitation of iOS. See: https://github.com/boskokg/flutter_blue_plus/issues/419
+* **[Breaking Change/Fix]** Android: When `read` is called `onValueChangedStream` is pushed to as well. This change was made to make both platforms behave the same way. It is an unavoidable limitation of iOS. See: https://github.com/chipweinberger/flutter_blue_plus/issues/419
 * **[Fix]** Android/iOS: mtu check minus 3 issue (reggression in 1.8.3)
 * **[Fix]** Dart: `BluetoothCharacteristic.state` variable not working (reggression in 1.8.6)
 * **[Fix]** Dart: `FlutterBluePlus.state` variable not working (reggression in 1.8.6)

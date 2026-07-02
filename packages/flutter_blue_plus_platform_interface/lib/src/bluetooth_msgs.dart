@@ -972,18 +972,22 @@ class BmSetLogLevelRequest {
 }
 
 class BmSetOptionsRequest {
-  bool showPowerAlert;
-  bool restoreState;
+  bool? showPowerAlert;
+  bool? restoreState;
 
   BmSetOptionsRequest({
-    required this.showPowerAlert,
-    required this.restoreState,
+    this.showPowerAlert,
+    this.restoreState,
   });
 
   Map<dynamic, dynamic> toMap() {
     final Map<dynamic, dynamic> data = {};
-    data['show_power_alert'] = showPowerAlert;
-    data['restore_state'] = restoreState;
+    if (showPowerAlert != null) {
+      data['show_power_alert'] = showPowerAlert;
+    }
+    if (restoreState != null) {
+      data['restore_state'] = restoreState;
+    }
     return data;
   }
 }

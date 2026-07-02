@@ -1,4 +1,4 @@
-// Copyright 2017-2023, Charles Weinberger & Paul DeMarco.
+// Copyright 2017-2023, Charles Weinberger
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
@@ -46,6 +46,7 @@ class FlutterBluePlus {
 
   /// FlutterBluePlus log level
   static LogLevel _logLevel = LogLevel.debug;
+  static OperationQueueMode _operationQueueMode = OperationQueueMode.global;
 
   ////////////////////
   //  Public
@@ -82,7 +83,8 @@ class FlutterBluePlus {
   static Stream<List<ScanResult>> get scanResults => _scanResults.stream;
 
   /// This is the same as scanResults, except:
-  /// - it *does not* re-emit previous results after scanning stops.
+  /// - if you re-listen to the stream it DOES NOT re-emit previous
+  ///   results from previously stopped scans.
   static Stream<List<ScanResult>> get onScanResults {
     if (isScanningNow) {
       return _scanResults.stream;
@@ -98,20 +100,70 @@ class FlutterBluePlus {
   /// Get access to FBP logs
   static Stream<String> get logs => FlutterBluePlusPlatform.logs;
 
+  /// The current operation queue mode. See: setOperationQueueMode
+  static OperationQueueMode get operationQueueMode => _operationQueueMode;
+
+  /// Sets how BLE operations are queued.
+  ///
+  /// Call this before starting any other BLE work.
+  ///
+  /// - [OperationQueueMode.global] keeps the historical behavior and allows
+  ///   only one BLE operation at a time across the whole app.
+  /// - [OperationQueueMode.perDevice] allows operations for different devices
+  ///   to proceed concurrently, while still serializing operations per device.
+  ///
+  /// We recommend [OperationQueueMode.perDevice] for new apps.
+  /// [OperationQueueMode.global] remains the default for backward
+  /// compatibility.
+  ///
+  /// This is useful if your app talks to multiple devices at the same time
+  /// as it allows simultaneous device writing, discovery, and reads.
+  ///
+  /// Throws a [StateError] if you try to change modes after BLE work
+  /// has already been started in the other mode.
+  static void setOperationQueueMode(OperationQueueMode mode) {
+    if (_operationQueueMode == mode) {
+      return;
+    }
+
+    if (_hasOperationMutexesForMode(_operationQueueMode)) {
+      throw StateError("setOperationQueueMode must be called before starting any BLE work");
+    }
+
+    _operationQueueMode = mode;
+  }
+
   /// Set configurable options
   ///   - [showPowerAlert] Whether to show the power alert (iOS & MacOS only). i.e. CBCentralManagerOptionShowPowerAlertKey
-  ///       To set this option you must call this method before any other method in this package.
+  ///       Defaults to `true` unless explicity set. To set this option you must call this method first before any other in this package.
   ///       See: https://developer.apple.com/documentation/corebluetooth/cbcentralmanageroptionshowpoweralertkey
   ///       This option has no effect on Android.
   ///   - [restoreState] Whether to opt into state restoration (iOS & MacOS only). i.e. CBCentralManagerOptionRestoreIdentifierKey
-  ///       To set this option you must call this method before any other method in this package.
+  ///       Defaults to `false` unless explicity set. To set this option you must call this method first before any other in this package.
   ///       See Apple Documentation for more details. This option has no effect on Android.
+  ///   - Any option left `null` keeps its existing value.
   static Future<void> setOptions({
-    bool showPowerAlert = true,
-    bool restoreState = false,
+    bool? showPowerAlert,
+    bool? restoreState,
   }) async {
     await _invokePlatform(() => FlutterBluePlusPlatform.instance
         .setOptions(BmSetOptionsRequest(showPowerAlert: showPowerAlert, restoreState: restoreState)));
+  }
+
+  static String _bleOperationMutexKey(DeviceIdentifier remoteId) {
+    return _operationQueueMode == OperationQueueMode.perDevice ? "device:$remoteId" : "global";
+  }
+
+  static String _disconnectMutexKey(DeviceIdentifier remoteId) {
+    return _operationQueueMode == OperationQueueMode.perDevice ? "disconnect:$remoteId" : "disconnect";
+  }
+
+  static bool _hasOperationMutexesForMode(OperationQueueMode mode) {
+    if (mode == OperationQueueMode.global) {
+      return _MutexFactory.hasMutexWhere((key) => key == "global" || key == "disconnect");
+    } else {
+      return _MutexFactory.hasMutexWhere((key) => key.startsWith("device:") || key.startsWith("disconnect:"));
+    }
   }
 
   /// Turn on Bluetooth (Android only),
@@ -143,8 +195,8 @@ class FlutterBluePlus {
   static Stream<BluetoothAdapterState> get adapterState async* {
     // get current state if needed
     if (_adapterStateNow == null) {
-      var result =
-          await _invokePlatform(() => FlutterBluePlusPlatform.instance.getAdapterState(BmBluetoothAdapterStateRequest()));
+      var result = await _invokePlatform(
+          () => FlutterBluePlusPlatform.instance.getAdapterState(BmBluetoothAdapterStateRequest()));
       // update _adapterStateNow if it is still null after the await
       _adapterStateNow ??= result.adapterState;
     }
@@ -418,6 +470,9 @@ class FlutterBluePlus {
 
     _initialized = true;
 
+    // fbp version
+    FlutterBluePlusPlatform.log('flutter_blue_plus_version=$_flutterBluePlusDartVersion');
+
     // android only
     if (!kIsWeb && Platform.isAndroid) {
       FlutterBluePlusPlatform.instance.onDetachedFromEngine.listen((r) {
@@ -433,7 +488,9 @@ class FlutterBluePlus {
       }
       if (r.adapterState == BmAdapterStateEnum.on) {
         for (DeviceIdentifier d in _autoConnect) {
-          BluetoothDevice(remoteId: d).connect(license: License.free, autoConnect: true, mtu: null).onError((e, s) {
+          BluetoothDevice(remoteId: d)
+              .connect(license: License.nonprofit, autoConnect: true, mtu: null)
+              .onError((e, s) {
             if (logLevel != LogLevel.none) {
               FlutterBluePlusPlatform.log("[FBP] [AutoConnect] connection failed: $e");
             }
@@ -468,7 +525,7 @@ class FlutterBluePlus {
           if (_autoConnect.contains(r.remoteId)) {
             if (_adapterStateNow == BmAdapterStateEnum.on) {
               var d = BluetoothDevice(remoteId: r.remoteId);
-              d.connect(license: License.free, autoConnect: true, mtu: null).onError((e, s) {
+              d.connect(license: License.nonprofit, autoConnect: true, mtu: null).onError((e, s) {
                 if (logLevel != LogLevel.none) {
                   FlutterBluePlusPlatform.log("[FBP] [AutoConnect] connection failed: $e");
                 }
@@ -525,7 +582,8 @@ class FlutterBluePlus {
             [FlutterBluePlusPlatform.instance.onDescriptorRead, FlutterBluePlusPlatform.instance.onDescriptorWritten])
         .listen((r) {
       if (r.success == true) {
-        String key = "${r.primaryServiceUuid ?? ""}:${r.serviceUuid}:${r.characteristicUuid}:${r.instanceId}:${r.descriptorUuid}";
+        String key =
+            "${r.primaryServiceUuid ?? ""}:${r.serviceUuid}:${r.characteristicUuid}:${r.instanceId}:${r.descriptorUuid}";
         _lastDescs[r.remoteId] ??= {};
         _lastDescs[r.remoteId]![key] = r.value;
       }
@@ -603,6 +661,20 @@ class FlutterBluePlus {
 
   @Deprecated('removed. read MIGRATION.md for simple alternatives')
   static Stream<ScanResult> scan() => throw Exception;
+}
+
+enum OperationQueueMode {
+  /// Queue all BLE operations behind a single global mutex.
+  ///
+  /// This is the default and preserves the historical behavior of
+  /// `flutter_blue_plus`.
+  global,
+
+  /// Queue BLE operations independently for each connected device.
+  ///
+  /// This allows operations on different devices to run concurrently while
+  /// still preserving ordering for each individual device.
+  perDevice,
 }
 
 class AndroidScanMode {

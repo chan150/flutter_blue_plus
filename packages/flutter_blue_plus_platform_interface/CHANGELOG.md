@@ -1,3 +1,24 @@
+## 9.0.3
+* **[LICENSE]** add `Corporate` tier for 250+ employees
+
+## 9.0.2
+* **[LICENSE]** clarify build-time license ping in the FlutterBluePlus License
+
+## 9.0.1
+* **[Fix]** Darwin: crash when calling `setOptions` with a single argument (regression 9.0.0)
+
+## 9.0.0
+* `BmSetOptionsRequest.showPowerAlert` and `restoreState` are now nullable so args can be set individually
+
+## 8.2.2
+* **[Release]** version bump for the flutter_blue_plus 2.2.2 release
+
+## 8.2.1
+* **[LICENSE]** clarifications to the development exemption
+
+## 8.2.0
+* **[LICENSE]** new tiers based on company size & development exemption
+
 ## 8.1.0
 * **[LICENSE]** commercial license is now required for 15 or more employees
 

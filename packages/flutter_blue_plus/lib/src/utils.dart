@@ -12,6 +12,27 @@ extension AddOrUpdate<T> on List<T> {
   }
 }
 
+extension RemoveWhere<T> on List<T> {
+  /// returns true if some items where removed
+  bool _removeWhere(bool Function(T) test) {
+    int initialLength = length;
+    removeWhere(test);
+    return length != initialLength;
+  }
+}
+
+extension FirstWhereOrNullExtension<T> on Iterable<T> {
+  /// returns first item to satisfy `test`, else null
+  T? _firstWhereOrNull(bool Function(T) test) {
+    for (var element in this) {
+      if (test(element)) {
+        return element;
+      }
+    }
+    return null;
+  }
+}
+
 extension FutureTimeout<T> on Future<T> {
   Future<T> fbpTimeout(int seconds, String function) {
     return timeout(Duration(seconds: seconds), onTimeout: () {
@@ -197,10 +218,9 @@ class _NewStreamWithInitialValueTransformer<T> extends StreamTransformerBase<T, 
   }
 
   Stream<T> _bind(Stream<T> stream, {bool broadcast = false}) {
-
     /////////////////////////////////////////
     /// Original Stream Subscription Callbacks
-    /// 
+    ///
 
     /// When the original stream emits data, forward it to our new stream
     void onData(T data) {
@@ -238,22 +258,22 @@ class _NewStreamWithInitialValueTransformer<T> extends StreamTransformerBase<T, 
 
     //////////////////////////////////////
     ///  New Stream Controller Callbacks
-    /// 
+    ///
 
     /// (Single Subscription Only) When a client pauses
-    /// the new stream, pause the original stream 
+    /// the new stream, pause the original stream
     void onPause() {
       subscription.pause();
     }
 
     /// (Single Subscription Only) When a client resumes
-    /// the new stream, resume the original stream 
+    /// the new stream, resume the original stream
     void onResume() {
       subscription.resume();
     }
 
-    /// Called when a client cancels their 
-    /// subscription to the new stream, 
+    /// Called when a client cancels their
+    /// subscription to the new stream,
     void onCancel() {
       // count listeners of the new stream
       listenerCount--;
@@ -269,7 +289,7 @@ class _NewStreamWithInitialValueTransformer<T> extends StreamTransformerBase<T, 
 
     //////////////////////////////////////
     /// Return New Stream
-    /// 
+    ///
 
     // create a new stream controller
     if (broadcast) {
@@ -332,58 +352,4 @@ Stream<T> _mergeStreams<T>(List<Stream<T>> streams) {
   };
 
   return controller.stream;
-}
-
-// dart is single threaded, but still has task switching.
-// this mutex lets a single task through at a time.
-class _Mutex {
-  final StreamController _controller = StreamController.broadcast();
-  int execute = 0;
-  int issued = 0;
-
-  Future<bool> take() async {
-    int mine = issued;
-    issued++;
-    // tasks are executed in the same order they call take()
-    while (mine != execute) {
-      await _controller.stream.first; // wait
-    }
-    return true;
-  }
-
-  bool give() {
-    execute++;
-    _controller.add(null); // release waiting tasks
-    return false;
-  }
-}
-
-// Create mutexes in a parallel-safe way,
-class _MutexFactory {
-  static final Map<String, _Mutex> _all = {};
-  static _Mutex getMutexForKey(String key) {
-    _all[key] ??= _Mutex();
-    return _all[key]!;
-  }
-}
-
-extension FirstWhereOrNullExtension<T> on Iterable<T> {
-  /// returns first item to satisfy `test`, else null
-  T? _firstWhereOrNull(bool Function(T) test) {
-    for (var element in this) {
-      if (test(element)) {
-        return element;
-      }
-    }
-    return null;
-  }
-}
-
-extension RemoveWhere<T> on List<T> {
-  /// returns true if some items where removed
-  bool _removeWhere(bool Function(T) test) {
-    int initialLength = length;
-    removeWhere(test);
-    return length != initialLength;
-  }
 }

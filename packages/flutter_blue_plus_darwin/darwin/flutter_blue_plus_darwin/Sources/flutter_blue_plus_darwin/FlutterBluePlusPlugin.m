@@ -1,4 +1,4 @@
-// Copyright 2017-2023, Charles Weinberger & Paul DeMarco.
+// Copyright 2017-2023, Charles Weinberger
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
@@ -36,8 +36,9 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 @property(nonatomic) NSMutableDictionary *knownPeripherals;
 @property(nonatomic) NSMutableDictionary *connectedPeripherals;
 @property(nonatomic) NSMutableDictionary *currentlyConnectingPeripherals;
-@property(nonatomic) NSMutableArray *servicesToDiscover;
-@property(nonatomic) NSMutableArray *characteristicsToDiscover;
+@property(nonatomic) NSMutableDictionary *servicesToDiscover;
+@property(nonatomic) NSMutableDictionary *characteristicsToDiscover;
+@property(nonatomic) NSMutableDictionary *discoveryErrors;
 @property(nonatomic) NSMutableDictionary *didWriteWithoutResponse;
 @property(nonatomic) NSMutableDictionary *peripheralMtu;
 @property(nonatomic) NSMutableDictionary *writeChrs;
@@ -60,8 +61,9 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     instance.knownPeripherals = [NSMutableDictionary new];
     instance.connectedPeripherals = [NSMutableDictionary new];
     instance.currentlyConnectingPeripherals = [NSMutableDictionary new];
-    instance.servicesToDiscover = [NSMutableArray new];
-    instance.characteristicsToDiscover = [NSMutableArray new];
+    instance.servicesToDiscover = [NSMutableDictionary new];
+    instance.characteristicsToDiscover = [NSMutableDictionary new];
+    instance.discoveryErrors = [NSMutableDictionary new];
     instance.didWriteWithoutResponse = [NSMutableDictionary new];
     instance.peripheralMtu = [NSMutableDictionary new];
     instance.writeChrs = [NSMutableDictionary new];
@@ -110,8 +112,12 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
         if ([@"setOptions" isEqualToString:call.method])
         {
             NSDictionary *args = (NSDictionary*) call.arguments;
-            self.showPowerAlert = args[@"show_power_alert"];
-            self.restoreState = args[@"restore_state"];
+            if (args[@"show_power_alert"] != nil) {
+                self.showPowerAlert = args[@"show_power_alert"];
+            }
+            if (args[@"restore_state"] != nil) {
+                self.restoreState = args[@"restore_state"];
+            }
             result(@YES);
             return;
         }
@@ -436,9 +442,8 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
                 return;
             }
 
-            // Clear helper arrays
-            [self.servicesToDiscover removeAllObjects];
-            [self.characteristicsToDiscover removeAllObjects];
+            // Reset discovery tracking for this peripheral only.
+            [self clearPendingDiscoveryForRemoteId:remoteId];
 
             // start discovery
             [peripheral discoverServices:nil];
@@ -837,7 +842,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 }
 
 
-- (NSNumber *)getInstanceId:(CBCharacteristic *)characteristic
+- (NSNumber *)getLocalInstanceId:(CBCharacteristic *)characteristic
 {
     CBService *svc = characteristic.service;
     if (!svc) return @(0);
@@ -854,6 +859,65 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     return @(0);
 }
 
+- (NSArray<CBService *> *)getMatchingServices:(CBPeripheral *)peripheral
+                            primaryServiceUuid:(NSString *)primaryServiceUuid
+                                   serviceUuid:(NSString *)serviceUuid
+{
+    NSMutableArray<CBService *> *matches = [NSMutableArray new];
+    bool isSecondaryService = primaryServiceUuid != nil;
+
+    if (!isSecondaryService) {
+        for (CBService *service in [peripheral services]) {
+            if ([service.UUID isEqual:[CBUUID UUIDWithString:serviceUuid]]) {
+                [matches addObject:service];
+            }
+        }
+        return matches;
+    }
+
+    for (CBService *primary in [peripheral services]) {
+        if (![primary.UUID isEqual:[CBUUID UUIDWithString:primaryServiceUuid]]) {
+            continue;
+        }
+        for (CBService *secondary in [primary includedServices]) {
+            if ([secondary.UUID isEqual:[CBUUID UUIDWithString:serviceUuid]]) {
+                [matches addObject:secondary];
+            }
+        }
+    }
+
+    return matches;
+}
+
+- (NSNumber *)getInstanceId:(CBPeripheral *)peripheral characteristic:(CBCharacteristic *)characteristic
+{
+    CBService *service = characteristic.service;
+    if (!service) return @(0);
+
+    CBService *primaryService = [self getPrimaryService:peripheral characteristic:characteristic];
+    NSString *primaryServiceUuid = primaryService ? [primaryService.UUID uuidStr] : nil;
+    NSString *serviceUuid = [service.UUID uuidStr];
+    NSArray<CBService *> *services = [self getMatchingServices:peripheral
+                                            primaryServiceUuid:primaryServiceUuid
+                                                   serviceUuid:serviceUuid];
+
+    if ([services count] <= 1) {
+        return [self getLocalInstanceId:characteristic];
+    }
+
+    NSInteger idx = 0;
+    for (CBService *candidateService in services) {
+        for (CBCharacteristic *candidate in candidateService.characteristics) {
+            if (candidate == characteristic) {
+                return @(idx);
+            }
+            idx++;
+        }
+    }
+
+    return @(0);
+}
+
 
 - (CBCharacteristic *)locateCharacteristic:(NSString *)characteristicId
                                 peripheral:(CBPeripheral *)peripheral
@@ -866,41 +930,43 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     // remember
     bool isSecondaryService = primaryServiceUuid != nil;
 
-    // primary service
-    if (primaryServiceUuid == nil) {
-        primaryServiceUuid = serviceUuid;
-    }
-
-    // primary service
-    CBService *primaryService = [self getServiceFromArray:primaryServiceUuid array:[peripheral services]];
-    if (primaryService == nil || !primaryService.isPrimary)
+    NSArray<CBService *> *services = [self getMatchingServices:peripheral
+                                            primaryServiceUuid:primaryServiceUuid
+                                                   serviceUuid:serviceUuid];
+    if ([services count] == 0)
     {
-        NSString* s = [NSString stringWithFormat:@"primary service not found '%@'", primaryServiceUuid];
+        NSString* s = isSecondaryService
+            ? [NSString stringWithFormat:@"secondary service not found '%@' (primary service %@)", serviceUuid, primaryServiceUuid]
+            : [NSString stringWithFormat:@"primary service not found '%@'", serviceUuid];
         NSDictionary* d = @{NSLocalizedDescriptionKey : s};
-        *error = [NSError errorWithDomain:@"flutterBluePlus" code:1000 userInfo:d];
+        *error = [NSError errorWithDomain:@"flutterBluePlus" code:isSecondaryService ? 1001 : 1000 userInfo:d];
         return nil;
     }
 
-    // associated primary service
-    CBService *secondaryService = nil;
-    if (isSecondaryService)
+    CBCharacteristic *characteristic = nil;
+    if ([services count] <= 1)
     {
-        secondaryService = [self getServiceFromArray:serviceUuid array:[primaryService includedServices]];
-        if (error && !secondaryService) {
-            NSString* s = [NSString stringWithFormat:@"secondary service not found '%@' (primary service %@)", serviceUuid, primaryServiceUuid];
-            NSDictionary* d = @{NSLocalizedDescriptionKey : s};
-            *error = [NSError errorWithDomain:@"flutterBluePlus" code:1001 userInfo:d];
-            return nil;
+        characteristic = [self getCharacteristicFromArray:characteristicId
+                                                    array:[services.firstObject characteristics]
+                                               instanceId:instanceId];
+    }
+    else
+    {
+        NSInteger idx = 0;
+        for (CBService *service in services)
+        {
+            for (CBCharacteristic *candidate in [service characteristics])
+            {
+                if (idx == [instanceId integerValue] && [candidate.UUID isEqual:[CBUUID UUIDWithString:characteristicId]])
+                {
+                    characteristic = candidate;
+                    break;
+                }
+                idx++;
+            }
+            if (characteristic != nil) {break;}
         }
     }
-
-    // which service?
-    CBService *service = (secondaryService != nil) ? secondaryService : primaryService;
-
-    // characteristic
-    CBCharacteristic *characteristic = [self getCharacteristicFromArray:characteristicId 
-                                                                       array:[service characteristics] 
-                                                                       instanceId:instanceId];
 
     if (characteristic == nil)
     {
@@ -949,7 +1015,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     {
         if ([c.UUID isEqual:[CBUUID UUIDWithString:uuid]])
         {
-            if ([instanceId isEqualToNumber:[self getInstanceId:c]])
+            if ([instanceId isEqualToNumber:[self getLocalInstanceId:c]])
             {
                  return c;
             }
@@ -1021,10 +1087,92 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 
     [self.servicesToDiscover removeAllObjects];
     [self.characteristicsToDiscover removeAllObjects];
+    [self.discoveryErrors removeAllObjects];
     [self.didWriteWithoutResponse removeAllObjects];
     [self.peripheralMtu removeAllObjects];
     [self.writeChrs removeAllObjects];
     [self.writeDescs removeAllObjects];
+}
+
+- (NSMutableArray *)pendingServicesForRemoteId:(NSString *)remoteId createIfMissing:(BOOL)create
+{
+    NSMutableArray *pending = self.servicesToDiscover[remoteId];
+    if (pending == nil && create) {
+        pending = [NSMutableArray new];
+        self.servicesToDiscover[remoteId] = pending;
+    }
+    return pending;
+}
+
+- (NSMutableArray *)pendingCharacteristicsForRemoteId:(NSString *)remoteId createIfMissing:(BOOL)create
+{
+    NSMutableArray *pending = self.characteristicsToDiscover[remoteId];
+    if (pending == nil && create) {
+        pending = [NSMutableArray new];
+        self.characteristicsToDiscover[remoteId] = pending;
+    }
+    return pending;
+}
+
+- (void)clearPendingDiscoveryForRemoteId:(NSString *)remoteId
+{
+    [self.servicesToDiscover removeObjectForKey:remoteId];
+    [self.characteristicsToDiscover removeObjectForKey:remoteId];
+    [self.discoveryErrors removeObjectForKey:remoteId];
+}
+
+- (void)clearCachedWritesForRemoteId:(NSString *)remoteId
+{
+    NSString *prefix = [NSString stringWithFormat:@"%@:", remoteId];
+
+    for (NSString *key in [self.writeChrs allKeys]) {
+        if ([key hasPrefix:prefix]) {
+            [self.writeChrs removeObjectForKey:key];
+        }
+    }
+
+    for (NSString *key in [self.writeDescs allKeys]) {
+        if ([key hasPrefix:prefix]) {
+            [self.writeDescs removeObjectForKey:key];
+        }
+    }
+}
+
+- (void)recordDiscoveryError:(NSError *)error remoteId:(NSString *)remoteId
+{
+    if (error != nil && self.discoveryErrors[remoteId] == nil) {
+        self.discoveryErrors[remoteId] = error;
+    }
+}
+
+- (void)completeDiscoveryIfReady:(CBPeripheral *)peripheral
+{
+    NSString *remoteId = [[peripheral identifier] UUIDString];
+    NSMutableArray *pendingServices = [self pendingServicesForRemoteId:remoteId createIfMissing:NO];
+    NSMutableArray *pendingCharacteristics = [self pendingCharacteristicsForRemoteId:remoteId createIfMissing:NO];
+
+    if (pendingServices.count > 0 || pendingCharacteristics.count > 0) {
+        return;
+    }
+
+    NSError *error = self.discoveryErrors[remoteId];
+    [self clearPendingDiscoveryForRemoteId:remoteId];
+
+    NSMutableArray *services = [NSMutableArray new];
+    for (CBService *s in [peripheral services])
+    {
+        [services addObject:[self bmBluetoothService:peripheral service:s]];
+    }
+
+    NSDictionary* response = @{
+        @"remote_id":       remoteId,
+        @"services":        services,
+        @"success":         @(error == nil),
+        @"error_string":    error ? [error localizedDescription] : @"success",
+        @"error_code":      error ? @(error.code) : @(0),
+    };
+
+    [self.methodChannel invokeMethod:@"OnDiscoveredServices" arguments:response];
 }
 
 ////////////////////////////////////
@@ -1111,16 +1259,14 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
             // update connection state
             Log(LDEBUG, @"Restore: already connected to %@", peripheral.identifier.UUIDString);
             [self centralManager:central didConnectPeripheral:peripheral];
-            
+
+            // restore cached services and notifications for this peripheral
+            [self peripheral:peripheral didDiscoverServices:nil];
+
             for (CBService *service in peripheral.services) {
+                [self peripheral:peripheral didDiscoverCharacteristicsForService:service error:nil];
 
-                // restore services
-                [self peripheral:peripheral didDiscoverServices:nil];
-                
                 for (CBCharacteristic *characteristic in service.characteristics) {
-
-                    // restore characteristics
-                    [self peripheral:peripheral didDiscoverCharacteristicsForService:service error:nil];
 
                     // restore notifications
                     if (characteristic.isNotifying) {
@@ -1299,6 +1445,11 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     // clear negotiated mtu
     [self.peripheralMtu removeObjectForKey:peripheral];
 
+    // clear any per-device state that would otherwise leak across reconnects
+    [self clearPendingDiscoveryForRemoteId:remoteId];
+    [self.didWriteWithoutResponse removeObjectForKey:remoteId];
+    [self clearCachedWritesForRemoteId:remoteId];
+
     // Unregister self as delegate for peripheral, not working #42
     peripheral.delegate = nil;
 
@@ -1333,6 +1484,11 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     // remove from currently connecting peripherals
     [self.currentlyConnectingPeripherals removeObjectForKey:remoteId];
 
+    // clear any state tied to the failed connection attempt
+    [self clearPendingDiscoveryForRemoteId:remoteId];
+    [self.didWriteWithoutResponse removeObjectForKey:remoteId];
+    [self clearCachedWritesForRemoteId:remoteId];
+
     // See BmConnectionStateResponse
     NSDictionary *result = @{
         @"remote_id":                [[peripheral identifier] UUIDString],
@@ -1364,12 +1520,24 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     if (error) {
         Log(LERROR, @"didDiscoverServices:");
         Log(LERROR, @"  error: %@", [error localizedDescription]);
+        [self recordDiscoveryError:error remoteId:[[peripheral identifier] UUIDString]];
     } else {
         Log(LDEBUG, @"didDiscoverServices:");
     }
 
+    NSString *remoteId = [[peripheral identifier] UUIDString];
+    NSMutableArray *pendingServices = [self pendingServicesForRemoteId:remoteId createIfMissing:YES];
+
     // discover characteristics and included services
-    [self.servicesToDiscover addObjectsFromArray:peripheral.services];
+    [pendingServices addObjectsFromArray:peripheral.services];
+
+    // If there are no services, descriptor discovery will never fire,
+    // so finish discovery immediately.
+    if (peripheral.services.count == 0) {
+        [self completeDiscoveryIfReady:peripheral];
+        return;
+    }
+
     for (CBService *s in [peripheral services]) {
         Log(LDEBUG, @"  svc: %@", [s.UUID uuidStr]);
         [peripheral discoverCharacteristics:nil forService:s];
@@ -1385,13 +1553,18 @@ didDiscoverCharacteristicsForService:(CBService *)service
         Log(LERROR, @"didDiscoverCharacteristicsForService:");
         Log(LERROR, @"  svc: %@", [service.UUID uuidStr]);
         Log(LERROR, @"  error: %@", [error localizedDescription]);
+        [self recordDiscoveryError:error remoteId:[[peripheral identifier] UUIDString]];
     } else {
         Log(LDEBUG, @"didDiscoverCharacteristicsForService:");
         Log(LDEBUG, @"  svc: %@", [service.UUID uuidStr]);
     }
 
-    [self.servicesToDiscover removeObject:service];
-    [self.characteristicsToDiscover addObjectsFromArray:service.characteristics];
+    NSString *remoteId = [[peripheral identifier] UUIDString];
+    NSMutableArray *pendingServices = [self pendingServicesForRemoteId:remoteId createIfMissing:NO];
+    NSMutableArray *pendingCharacteristics = [self pendingCharacteristicsForRemoteId:remoteId createIfMissing:YES];
+
+    [pendingServices removeObject:service];
+    [pendingCharacteristics addObjectsFromArray:service.characteristics];
 
     // Loop through and discover descriptors for characteristics
     for (CBCharacteristic *c in [service characteristics])
@@ -1399,6 +1572,8 @@ didDiscoverCharacteristicsForService:(CBService *)service
         Log(LDEBUG, @"    chr: %@", [c.UUID uuidStr]);
         [peripheral discoverDescriptorsForCharacteristic:c];
     }
+
+    [self completeDiscoveryIfReady:peripheral];
 }
 
 
@@ -1410,10 +1585,14 @@ didDiscoverCharacteristicsForService:(CBService *)service
         Log(LERROR, @"didDiscoverDescriptorsForCharacteristic:");
         Log(LERROR, @"  chr: %@", [characteristic.UUID uuidStr]);
         Log(LERROR, @"  error: %@", [error localizedDescription]);
+        [self recordDiscoveryError:error remoteId:[[peripheral identifier] UUIDString]];
     } else {
         Log(LDEBUG, @"didDiscoverDescriptorsForCharacteristic:");
         Log(LDEBUG, @"  chr: %@", [characteristic.UUID uuidStr]);
     }
+
+    NSString *remoteId = [[peripheral identifier] UUIDString];
+    NSMutableArray *pendingCharacteristics = [self pendingCharacteristicsForRemoteId:remoteId createIfMissing:NO];
 
     // print descriptors
     for (CBDescriptor *d in [characteristic descriptors])
@@ -1422,30 +1601,8 @@ didDiscoverCharacteristicsForService:(CBService *)service
     }
 
     // have we finished discovering?
-    [self.characteristicsToDiscover removeObject:characteristic];
-    if (self.servicesToDiscover.count > 0 || self.characteristicsToDiscover.count > 0)
-    {
-        return; // Still discovering
-    }
-
-    // Add BmBluetoothServices to array
-    NSMutableArray *services = [NSMutableArray new];
-    for (CBService *s in [peripheral services])
-    {
-        [services addObject:[self bmBluetoothService:peripheral service:s]];
-    }
-
-    // See BmDiscoverServicesResult
-    NSDictionary* response = @{
-        @"remote_id":       [peripheral.identifier UUIDString],
-        @"services":        services,
-        @"success":         error == nil ? @(1) : @(0),
-        @"error_string":    error ? [error localizedDescription] : @"success",
-        @"error_code":      error ? @(error.code) : @(0),
-    };
-
-    // Send updated tree
-    [self.methodChannel invokeMethod:@"OnDiscoveredServices" arguments:response];
+    [pendingCharacteristics removeObject:characteristic];
+    [self completeDiscoveryIfReady:peripheral];
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral
@@ -1456,13 +1613,27 @@ didDiscoverCharacteristicsForService:(CBService *)service
         Log(LERROR, @"didDiscoverIncludedServicesForService:");
         Log(LERROR, @"  svc: %@", [service.UUID uuidStr]);
         Log(LERROR, @"  error: %@", [error localizedDescription]);
+        [self recordDiscoveryError:error remoteId:[[peripheral identifier] UUIDString]];
     } else {
         Log(LDEBUG, @"didDiscoverIncludedServicesForService:");
         Log(LDEBUG, @"  svc: %@", [service.UUID uuidStr]);
     }
 
-    // discover characteristics 
-    [peripheral discoverCharacteristics:nil forService:service];
+    NSString *remoteId = [[peripheral identifier] UUIDString];
+    NSMutableArray *pendingServices = [self pendingServicesForRemoteId:remoteId createIfMissing:YES];
+
+    // discover the included services themselves
+    for (CBService *included in [service includedServices]) {
+        // guard against pathological self-inclusion
+        if (included == service) {
+            continue;
+        }
+        [pendingServices addObject:included];
+        [peripheral discoverCharacteristics:nil forService:included];
+        [peripheral discoverIncludedServices:nil forService:included];
+    }
+
+    [self completeDiscoveryIfReady:peripheral];
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral
@@ -1487,7 +1658,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
         @"primary_service_uuid":        primaryService ? [primaryService.UUID uuidStr] : [NSNull null],
         @"service_uuid":                [characteristic.service.UUID uuidStr],
         @"characteristic_uuid":         [characteristic.UUID uuidStr],
-        @"instance_id":                 [self getInstanceId:characteristic],
+        @"instance_id":                 [self getInstanceId:peripheral characteristic:characteristic],
         @"value":                       characteristic.value ? characteristic.value : [NSNull null],
         @"success":                     error == nil ? @(1) : @(0),
         @"error_string":                error ? [error localizedDescription] : @"success",
@@ -1521,7 +1692,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
     NSString *primarySvcKey = primaryService != nil ? [primaryService.UUID uuidStr] : @"";
     NSString *serviceUuid = [characteristic.service.UUID uuidStr];
     NSString *characteristicUuid = [characteristic.UUID uuidStr];
-    NSNumber *instanceId = [self getInstanceId:characteristic];
+    NSNumber *instanceId = [self getInstanceId:peripheral characteristic:characteristic];
 
     // what data did we write?
     NSString *key = [NSString stringWithFormat:@"%@:%@:%@:%@:%@", 
@@ -1562,7 +1733,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
     }
 
     CBService *primaryService = [self getPrimaryService:peripheral characteristic:characteristic];
-    NSNumber *instanceId = [self getInstanceId:characteristic];
+    NSNumber *instanceId = [self getInstanceId:peripheral characteristic:characteristic];
 
     // Oddly iOS does not update the CCCD descriptors when didUpdateNotificationState is called. 
     // So instead of using characteristic.descriptors we have to manually recreate the
@@ -1613,7 +1784,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
     }
 
     CBService *primaryService = [self getPrimaryService:peripheral characteristic:descriptor.characteristic];
-    NSNumber *instanceId = [self getInstanceId:descriptor.characteristic];
+    NSNumber *instanceId = [self getInstanceId:peripheral characteristic:descriptor.characteristic];
 
     NSData* data = [self descriptorToData:descriptor];
     
@@ -1658,7 +1829,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
     NSString *remoteId = [peripheral.identifier UUIDString];
     NSString *serviceUuid = [descriptor.characteristic.service.UUID uuidStr];
     NSString *characteristicUuid = [descriptor.characteristic.UUID uuidStr];
-    NSNumber *instanceId = [self getInstanceId:descriptor.characteristic];
+    NSNumber *instanceId = [self getInstanceId:peripheral characteristic:descriptor.characteristic];
     NSString *primarySvcKey = primaryService != nil ? [primaryService.UUID uuidStr] : @"";
     NSString *descriptorUuid = [descriptor.UUID uuidStr];
 
@@ -1724,7 +1895,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
     // See BmReadRssiResult
     NSDictionary* result = @{
         @"remote_id":       [peripheral.identifier UUIDString],
-        @"rssi":            rssi,
+        @"rssi":            rssi ?: @(0),
         @"success":         @(error == nil),
         @"error_string":    error ? [error localizedDescription] : @"success",
         @"error_code":      error ? @(error.code) : @(0),
@@ -1938,7 +2109,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
                             characteristic:(CBCharacteristic *)characteristic
 {
     CBService *primaryService = [self getPrimaryService:peripheral characteristic:characteristic];
-    NSNumber *instanceId = [self getInstanceId:characteristic];
+    NSNumber *instanceId = [self getInstanceId:peripheral characteristic:characteristic];
 
     // descriptors
     NSMutableArray *descriptors = [NSMutableArray new];
@@ -2228,6 +2399,10 @@ didDiscoverCharacteristicsForService:(CBService *)service
     {
         for (CBService *secondary in [primary includedServices])
         {
+            if (secondary == service)
+            {
+                return primary;
+            }
             if ([secondary.UUID isEqual:service.UUID])
             {
                 return primary;

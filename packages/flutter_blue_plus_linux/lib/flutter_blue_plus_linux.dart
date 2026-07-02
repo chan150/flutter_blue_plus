@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:bluez/bluez.dart';
 import 'package:flutter_blue_plus_platform_interface/flutter_blue_plus_platform_interface.dart';
-import 'package:rxdart/rxdart.dart';
+import 'src/stream_utils.dart';
 
 extension on BlueZDevice {
   DeviceIdentifier get remoteId {
@@ -11,7 +11,7 @@ extension on BlueZDevice {
 }
 
 extension on BlueZGattCharacteristic {
-  int instanceId(BlueZGattService service) {
+  int localInstanceId(BlueZGattService service) {
     final target = Guid.fromBytes(uuid.value);
     var idx = 0;
     for (final c in service.characteristics) {
@@ -22,6 +22,22 @@ extension on BlueZGattCharacteristic {
     }
     return 0;
   }
+}
+
+extension on BlueZGattService {
+  Guid get guid {
+    return Guid.fromBytes(uuid.value);
+  }
+}
+
+final class _LinuxFoundCharacteristic {
+  final BlueZGattService service;
+  final BlueZGattCharacteristic characteristic;
+
+  const _LinuxFoundCharacteristic({
+    required this.service,
+    required this.characteristic,
+  });
 }
 
 final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
@@ -37,6 +53,63 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   final _onDiscoveredServicesController = StreamController<BmDiscoverServicesResult>.broadcast();
   final _onReadRssiController = StreamController<BmReadRssiResult>.broadcast();
   final _onTurnOnResponseController = StreamController<BmTurnOnResponse>.broadcast();
+
+  List<BlueZGattService> _matchingServices(BlueZDevice device, Guid serviceUuid) {
+    return device.gattServices.where((service) => service.guid == serviceUuid).toList();
+  }
+
+  int _instanceId(BlueZDevice device, BlueZGattService service, BlueZGattCharacteristic target) {
+    final services = _matchingServices(device, service.guid);
+    if (services.length <= 1) {
+      return target.localInstanceId(service);
+    }
+
+    var idx = 0;
+    for (final candidateService in services) {
+      for (final characteristic in candidateService.characteristics) {
+        if (identical(characteristic, target)) {
+          return idx;
+        }
+        idx++;
+      }
+    }
+
+    return 0;
+  }
+
+  _LinuxFoundCharacteristic _findCharacteristic(
+    BlueZDevice device,
+    Guid serviceUuid,
+    Guid characteristicUuid,
+    int instanceId,
+  ) {
+    final services = _matchingServices(device, serviceUuid);
+    if (services.isEmpty) {
+      throw StateError('service not found: $serviceUuid');
+    }
+
+    if (services.length <= 1) {
+      final service = services.single;
+      final characteristic = service.characteristics.singleWhere((characteristic) {
+        final uuid = Guid.fromBytes(characteristic.uuid.value);
+        return uuid == characteristicUuid && characteristic.localInstanceId(service) == instanceId;
+      });
+      return _LinuxFoundCharacteristic(service: service, characteristic: characteristic);
+    }
+
+    var idx = 0;
+    for (final service in services) {
+      for (final characteristic in service.characteristics) {
+        final uuid = Guid.fromBytes(characteristic.uuid.value);
+        if (idx == instanceId && uuid == characteristicUuid) {
+          return _LinuxFoundCharacteristic(service: service, characteristic: characteristic);
+        }
+        idx++;
+      }
+    }
+
+    throw StateError('characteristic not found: $characteristicUuid/$instanceId');
+  }
 
   @override
   Stream<BmBluetoothAdapterState> get onAdapterStateChanged {
@@ -65,7 +138,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   Stream<BmBondStateResponse> get onBondStateChanged {
     return _client.devicesChanged.switchMap(
       (devices) {
-        return MergeStream(
+        return mergeStreams(
           devices.map(
             (device) {
               return device.propertiesChanged.where(
@@ -114,7 +187,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                         characteristicUuid: Guid.fromBytes(
                           characteristic.uuid.value,
                         ),
-                        instanceId: characteristic.instanceId(service),
+                        instanceId: _instanceId(device, service, characteristic),
                         value: characteristic.value,
                         success: true,
                         errorCode: 0,
@@ -127,7 +200,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
             }
           }
 
-          return MergeStream(streams);
+          return mergeStreams(streams);
         },
       ),
     ]);
@@ -142,7 +215,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   Stream<BmConnectionStateResponse> get onConnectionStateChanged {
     return _client.devicesChanged.switchMap(
       (devices) {
-        return MergeStream(
+        return mergeStreams(
           devices.map(
             (device) {
               return device.propertiesChanged.where(
@@ -191,7 +264,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   Stream<BmNameChanged> get onNameChanged {
     return _client.devicesChanged.switchMap(
       (devices) {
-        return MergeStream(
+        return mergeStreams(
           devices.map(
             (device) {
               return device.propertiesChanged.where(
@@ -261,7 +334,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
   Stream<BmBluetoothDevice> get onServicesReset {
     return _client.devicesChanged.switchMap(
       (devices) {
-        return MergeStream(
+        return mergeStreams(
           devices.map(
             (device) {
               return device.propertiesChanged.where(
@@ -379,7 +452,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                       characteristicUuid: Guid.fromBytes(
                         characteristic.uuid.value,
                       ),
-                      instanceId: characteristic.instanceId(service),
+                      instanceId: _instanceId(device, service, characteristic),
                       descriptors: characteristic.descriptors.map(
                         (descriptor) {
                           return BmBluetoothDescriptor(
@@ -391,7 +464,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                             characteristicUuid: Guid.fromBytes(
                               characteristic.uuid.value,
                             ),
-                            instanceId: characteristic.instanceId(service),
+                            instanceId: _instanceId(device, service, characteristic),
                             descriptorUuid: Guid.fromBytes(
                               descriptor.uuid.value,
                             ),
@@ -561,26 +634,14 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
         },
       );
 
-      final service = device.gattServices.singleWhere(
-        (service) {
-          final uuid = Guid.fromBytes(
-            service.uuid.value,
-          );
-
-          return uuid == request.serviceUuid;
-        },
+      final found = _findCharacteristic(
+        device,
+        request.serviceUuid,
+        request.characteristicUuid,
+        request.instanceId,
       );
-
-      final characteristic = service.characteristics.singleWhere(
-        (characteristic) {
-          final uuid = Guid.fromBytes(
-            characteristic.uuid.value,
-          );
-
-          return uuid == request.characteristicUuid &&
-              (characteristic.instanceId(service) == request.instanceId);
-        },
-      );
+      final service = found.service;
+      final characteristic = found.characteristic;
 
       final value = await characteristic.readValue();
 
@@ -594,7 +655,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           characteristicUuid: Guid.fromBytes(
             characteristic.uuid.value,
           ),
-          instanceId: characteristic.instanceId(service),
+          instanceId: _instanceId(device, service, characteristic),
           value: value,
           success: true,
           errorCode: 0,
@@ -635,26 +696,14 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
         },
       );
 
-      final service = device.gattServices.singleWhere(
-        (service) {
-          final uuid = Guid.fromBytes(
-            service.uuid.value,
-          );
-
-          return uuid == request.serviceUuid;
-        },
+      final found = _findCharacteristic(
+        device,
+        request.serviceUuid,
+        request.characteristicUuid,
+        request.instanceId,
       );
-
-      final characteristic = service.characteristics.singleWhere(
-        (characteristic) {
-          final uuid = Guid.fromBytes(
-            characteristic.uuid.value,
-          );
-
-          return uuid == request.characteristicUuid &&
-              (characteristic.instanceId(service) == request.instanceId);
-        },
-      );
+      final service = found.service;
+      final characteristic = found.characteristic;
 
       final descriptor = characteristic.descriptors.singleWhere(
         (descriptor) {
@@ -678,7 +727,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           characteristicUuid: Guid.fromBytes(
             characteristic.uuid.value,
           ),
-          instanceId: characteristic.instanceId(service),
+          instanceId: _instanceId(device, service, characteristic),
           descriptorUuid: Guid.fromBytes(
             descriptor.uuid.value,
           ),
@@ -772,26 +821,13 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
       },
     );
 
-    final service = device.gattServices.singleWhere(
-      (service) {
-        final uuid = Guid.fromBytes(
-          service.uuid.value,
-        );
-
-        return uuid == request.serviceUuid;
-      },
+    final found = _findCharacteristic(
+      device,
+      request.serviceUuid,
+      request.characteristicUuid,
+      request.instanceId,
     );
-
-    final characteristic = service.characteristics.singleWhere(
-      (characteristic) {
-        final uuid = Guid.fromBytes(
-          characteristic.uuid.value,
-        );
-
-        return uuid == request.characteristicUuid &&
-            (characteristic.instanceId(service) == request.instanceId);
-      },
-    );
+    final characteristic = found.characteristic;
 
     if (request.enable) {
       await characteristic.startNotify();
@@ -898,26 +934,14 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
         },
       );
 
-      final service = device.gattServices.singleWhere(
-        (service) {
-          final uuid = Guid.fromBytes(
-            service.uuid.value,
-          );
-
-          return uuid == request.serviceUuid;
-        },
+      final found = _findCharacteristic(
+        device,
+        request.serviceUuid,
+        request.characteristicUuid,
+        request.instanceId,
       );
-
-      final characteristic = service.characteristics.singleWhere(
-        (characteristic) {
-          final uuid = Guid.fromBytes(
-            characteristic.uuid.value,
-          );
-
-          return uuid == request.characteristicUuid &&
-              (characteristic.instanceId(service) == request.instanceId);
-        },
-      );
+      final service = found.service;
+      final characteristic = found.characteristic;
 
       await characteristic.writeValue(
         request.value,
@@ -936,7 +960,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           characteristicUuid: Guid.fromBytes(
             characteristic.uuid.value,
           ),
-          instanceId: characteristic.instanceId(service),
+          instanceId: _instanceId(device, service, characteristic),
           value: request.value,
           success: true,
           errorCode: 0,
@@ -977,26 +1001,14 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
         },
       );
 
-      final service = device.gattServices.singleWhere(
-        (service) {
-          final uuid = Guid.fromBytes(
-            service.uuid.value,
-          );
-
-          return uuid == request.serviceUuid;
-        },
+      final found = _findCharacteristic(
+        device,
+        request.serviceUuid,
+        request.characteristicUuid,
+        request.instanceId,
       );
-
-      final characteristic = service.characteristics.singleWhere(
-        (characteristic) {
-          final uuid = Guid.fromBytes(
-            characteristic.uuid.value,
-          );
-
-          return uuid == request.characteristicUuid &&
-              (characteristic.instanceId(service) == request.instanceId);
-        },
-      );
+      final service = found.service;
+      final characteristic = found.characteristic;
 
       final descriptor = characteristic.descriptors.singleWhere(
         (descriptor) {
@@ -1020,7 +1032,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           characteristicUuid: Guid.fromBytes(
             characteristic.uuid.value,
           ),
-          instanceId: characteristic.instanceId(service),
+          instanceId: _instanceId(device, service, characteristic),
           descriptorUuid: Guid.fromBytes(
             descriptor.uuid.value,
           ),
@@ -1073,7 +1085,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
           );
         }
 
-        return MergeStream(
+        return mergeStreams(
           devices.map(
             (device) {
               return device.propertiesChanged.switchMap(
@@ -1102,7 +1114,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
                     }
                   }
 
-                  return MergeStream(streams);
+                  return mergeStreams(streams);
                 },
               );
             },
@@ -1115,7 +1127,7 @@ final class FlutterBluePlusLinux extends FlutterBluePlusPlatform {
 
 extension on BlueZClient {
   Stream<List<BlueZAdapter>> get adaptersChanged {
-    return MergeStream([
+    return mergeStreams([
       adapterAdded,
       adapterRemoved,
     ]).map(
@@ -1126,7 +1138,7 @@ extension on BlueZClient {
   }
 
   Stream<List<BlueZDevice>> get devicesChanged {
-    return MergeStream([
+    return mergeStreams([
       deviceAdded,
       deviceRemoved,
     ]).map(
