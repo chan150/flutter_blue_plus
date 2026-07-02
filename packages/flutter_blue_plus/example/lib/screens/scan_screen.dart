@@ -53,7 +53,7 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       // `withServices` is required on iOS for privacy purposes, ignored on android.
       var withServices = [Guid("180f")]; // Battery Level Service
-      _systemDevices = await FlutterBluePlus.systemDevices(withServices);
+      _systemDevices = await FlutterBluePlus.systemDevices([]); // Use empty list to find all on Windows
     } catch (e, backtrace) {
       Snackbar.show(ABC.b, prettyException("System Devices Error:", e), success: false);
       print(e);
@@ -87,6 +87,68 @@ class _ScanScreenState extends State<ScanScreen> {
       print(e);
       print("backtrace: $backtrace");
     }
+  }
+
+  Future onSystemDevicesPressed() async {
+    try {
+      _systemDevices = await FlutterBluePlus.systemDevices([]);
+      _showDeviceListDialog("System Devices", _systemDevices);
+    } catch (e) {
+      Snackbar.show(ABC.b, prettyException("System Devices Error:", e), success: false);
+    }
+  }
+
+  Future onConnectedDevicesPressed() async {
+    try {
+      List<BluetoothDevice> connectedDevices = FlutterBluePlus.connectedDevices;
+      _showDeviceListDialog("Connected Devices", connectedDevices);
+    } catch (e) {
+      Snackbar.show(ABC.b, prettyException("Connected Devices Error:", e), success: false);
+    }
+  }
+
+  void _showDeviceListDialog(String title, List<BluetoothDevice> devices) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: devices.isEmpty
+                ? const Text("No devices found")
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: devices.length,
+                    itemBuilder: (context, index) {
+                      return SystemDeviceTile(
+                        device: devices[index],
+                        onOpen: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => DeviceScreen(device: devices[index]),
+                              settings: RouteSettings(name: '/DeviceScreen'),
+                            ),
+                          );
+                        },
+                        onConnect: () {
+                          Navigator.of(context).pop();
+                          onConnectPressed(devices[index]);
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("CLOSE"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void onConnectPressed(BluetoothDevice device) {
@@ -175,7 +237,18 @@ class _ScanScreenState extends State<ScanScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Find Devices'),
-          actions: [buildScanButton(), const SizedBox(width: 15)],
+          actions: [
+            TextButton(
+              onPressed: onSystemDevicesPressed,
+              child: const Text("SYSTEM", style: TextStyle(color: Colors.white)),
+            ),
+            TextButton(
+              onPressed: onConnectedDevicesPressed,
+              child: const Text("CONNECTED", style: TextStyle(color: Colors.white)),
+            ),
+            buildScanButton(),
+            const SizedBox(width: 15)
+          ],
         ),
         body: RefreshIndicator(
           onRefresh: onRefresh,

@@ -132,7 +132,7 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (read) buildReadButton(context),
-        if (write) buildWriteButton(context),
+        buildWriteButton(context),
         if (notify || indicate) buildSubscribeButton(context),
       ],
     );

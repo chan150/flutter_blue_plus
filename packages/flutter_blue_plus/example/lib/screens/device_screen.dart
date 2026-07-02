@@ -22,6 +22,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   int? _rssi;
   int? _mtuSize;
   BluetoothConnectionState _connectionState = BluetoothConnectionState.disconnected;
+  BluetoothBondState _bondState = BluetoothBondState.none;
   List<BluetoothService> _services = [];
   bool _isDiscoveringServices = false;
   bool _isConnecting = false;
@@ -31,6 +32,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   late StreamSubscription<bool> _isConnectingSubscription;
   late StreamSubscription<bool> _isDisconnectingSubscription;
   late StreamSubscription<int> _mtuSubscription;
+  late StreamSubscription<BluetoothBondState> _bondStateSubscription;
 
   @override
   void initState() {
@@ -69,6 +71,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
         setState(() {});
       }
     });
+    
+    _bondStateSubscription = widget.device.bondState.listen((value) {
+      _bondState = value;
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -77,6 +86,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     _mtuSubscription.cancel();
     _isConnectingSubscription.cancel();
     _isDisconnectingSubscription.cancel();
+    _bondStateSubscription.cancel();
     super.dispose();
   }
 
@@ -147,6 +157,28 @@ class _DeviceScreenState extends State<DeviceScreen> {
       Snackbar.show(ABC.c, "Request Mtu: Success", success: true);
     } catch (e, backtrace) {
       Snackbar.show(ABC.c, prettyException("Change Mtu Error:", e), success: false);
+      print(e);
+      print("backtrace: $backtrace");
+    }
+  }
+
+  Future onBondPressed() async {
+    try {
+      await widget.device.createBond();
+      Snackbar.show(ABC.c, "Create Bond: Success", success: true);
+    } catch (e, backtrace) {
+      Snackbar.show(ABC.c, prettyException("Create Bond Error:", e), success: false);
+      print(e);
+      print("backtrace: $backtrace");
+    }
+  }
+
+  Future onRemoveBondPressed() async {
+    try {
+      await widget.device.removeBond();
+      Snackbar.show(ABC.c, "Remove Bond: Success", success: true);
+    } catch (e, backtrace) {
+      Snackbar.show(ABC.c, prettyException("Remove Bond Error:", e), success: false);
       print(e);
       print("backtrace: $backtrace");
     }
@@ -232,6 +264,25 @@ class _DeviceScreenState extends State<DeviceScreen> {
         ));
   }
 
+  Widget buildBondTile(BuildContext context) {
+    return ListTile(
+        title: const Text('Bond State'),
+        subtitle: Text('$_bondState'),
+        trailing: _bondState == BluetoothBondState.bonding
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.grey),
+                ),
+              )
+            : ElevatedButton(
+                onPressed: _bondState == BluetoothBondState.bonded ? onRemoveBondPressed : onBondPressed,
+                child: Text(_bondState == BluetoothBondState.bonded ? "UNBOND" : "BOND"),
+              ));
+  }
+
   Widget buildConnectButton(BuildContext context) {
     return Row(children: [
       if (_isConnecting || _isDisconnecting) buildSpinner(context),
@@ -267,6 +318,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 trailing: buildGetServices(context),
               ),
               buildMtuTile(context),
+              buildBondTile(context),
               ..._buildServiceTiles(context, widget.device),
             ],
           ),
